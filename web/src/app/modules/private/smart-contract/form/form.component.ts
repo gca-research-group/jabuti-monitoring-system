@@ -15,7 +15,6 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { BlockchainPlatformSelectorComponent } from '@app/components/blockchain-platform-selector';
 import { ButtonComponent } from '@app/components/button';
 import { DeleteDialogComponent } from '@app/components/delete-dialog';
-import { FileUploaderComponent } from '@app/components/file-uploader';
 import { IconButtonComponent } from '@app/components/icon-button';
 import { InputComponent } from '@app/components/input';
 import { BaseFormDirective } from '@app/directives/base';
@@ -36,7 +35,6 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
     ButtonComponent,
     IconButtonComponent,
     BlockchainPlatformSelectorComponent,
-    FileUploaderComponent,
 
     MatExpansionModule,
     TranslateModule,
