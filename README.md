@@ -72,12 +72,11 @@ This open-source project aims to serve as middleware between traditional softwar
 
 ---
 
-## Features
+## Architecture
 
-* ✅ Register blockchains
-* ✅ Store smart contracts
-* ✅ Trigger smart contract execution via high-level APIs
-* ✅ Event-driven architecture
+<p align="center">
+  <img src="assets/architecture.svg">
+</p>
 
 ---
 
