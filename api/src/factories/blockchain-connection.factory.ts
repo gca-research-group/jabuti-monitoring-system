@@ -1,5 +1,8 @@
+import { BadRequestException } from '@nestjs/common';
+
 import { BlockchainPlatform } from '@app/models/enums';
 import { IBlockchainConnectionService } from '@app/models/interfaces';
+import { DummyConnectionService } from '@app/modules/dummy/services/dummy.service';
 import { HyperledgerFabricConnectionService } from '@app/modules/hyperledger-fabric/services';
 
 export class BlockchainConnectionFactory {
@@ -19,6 +22,11 @@ export class BlockchainConnectionFactory {
             new HyperledgerFabricConnectionService(),
           );
           break;
+        case BlockchainPlatform.DUMMY:
+          this.instances.set(platform, new DummyConnectionService());
+          break;
+        default:
+          throw new BadRequestException('Unsupported blockchain platform');
       }
     }
 

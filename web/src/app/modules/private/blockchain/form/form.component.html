@@ -15,32 +15,34 @@
     class="col"
   />
 
-  <fieldset
-    formGroupName="parameters"
-    class="d-flex flex-column"
-    style="gap: 16px"
-  >
-    <legend class="mb-2">
-      {{ 'parameters' | translate }}
-    </legend>
+  @if (parameters.length> 0) {
+    <fieldset
+      formGroupName="parameters"
+      class="d-flex flex-column"
+      style="gap: 16px"
+    >
+      <legend class="mb-2">
+        {{ 'parameters' | translate }}
+      </legend>
 
-    @for (parameter of parameters; track $index) {
-      @if (parameter.type === 'string') {
-        <app-input
-          [formControlName]="parameter.field"
-          [label]="parameter.description ? `${parameter.field} (${parameter.description})` : parameter.field"
-          class="col"
-        />
-      } @else if (parameter.type === 'text') {
-        <app-textarea
-          [formControlName]="parameter.field"
-          [label]="parameter.field"
-          [hint]="parameter.description"
-          class="col"
-        />
+      @for (parameter of parameters; track $index) {
+        @if (parameter.type === 'string') {
+          <app-input
+            [formControlName]="parameter.field"
+            [label]="parameter.description ? `${parameter.field} (${parameter.description})` : parameter.field"
+            class="col"
+          />
+        } @else if (parameter.type === 'text') {
+          <app-textarea
+            [formControlName]="parameter.field"
+            [label]="parameter.field"
+            [hint]="parameter.description"
+            class="col"
+          />
+        }
       }
-    }
-  </fieldset>
+    </fieldset>
+  }
 
   <app-button
     label="save"

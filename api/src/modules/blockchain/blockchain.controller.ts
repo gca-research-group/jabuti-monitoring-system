@@ -35,6 +35,11 @@ export class BlockchainController {
     return this.service.config(platform);
   }
 
+  @Get('platforms')
+  platforms() {
+    return this.service.platforms();
+  }
+
   @Get()
   index(@Query() query: ListBlockchainDto) {
     return this.service.findAll(query);

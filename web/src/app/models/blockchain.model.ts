@@ -5,3 +5,9 @@ export interface Blockchain {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface BlockchainPlatform {
+  id: string;
+  name: string;
+  image: string;
+}

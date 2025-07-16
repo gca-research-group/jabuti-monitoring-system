@@ -75,7 +75,7 @@ This open-source project aims to serve as middleware between traditional softwar
 ## Architecture
 
 <p align="center">
-  <img src="assets/architecture.svg">
+  <img src="assets/architecture.svg" style="width: 100%">
 </p>
 
 ---

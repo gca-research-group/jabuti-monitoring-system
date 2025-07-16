@@ -14,9 +14,16 @@ export const UpdateSmartContractClauseSchema = z.object({
 
 export const UpdateSmartContractSchema = z.object({
   name: z.string({ message: 'NAME_IS_REQUIRED' }),
-  blockchainPlatform: z.enum([BlockchainPlatform.HYPERLEDGER_FABRIC], {
-    message: 'INVALID_BLOCKCHAIN_PLATFORM',
-  }),
+  blockchainPlatform: z.enum(
+    [
+      BlockchainPlatform.DUMMY,
+      BlockchainPlatform.ETHEREUM,
+      BlockchainPlatform.HYPERLEDGER_FABRIC,
+    ],
+    {
+      message: 'INVALID_BLOCKCHAIN_PLATFORM',
+    },
+  ),
   content: z.string().optional(),
   clauses: z.array(UpdateSmartContractClauseSchema).optional(),
 });

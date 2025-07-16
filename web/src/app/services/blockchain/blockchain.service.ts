@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { Blockchain, CrudService, FindAllResponse } from '@app/models';
+import {
+  Blockchain,
+  BlockchainPlatform,
+  CrudService,
+  FindAllResponse,
+} from '@app/models';
 
 import { environment } from '../../../environments/environment';
 
@@ -17,6 +22,12 @@ export class BlockchainService implements CrudService<Blockchain> {
       { field: string; type: string; description: string }[]
     >(`${this.url}config`, {
       params: { platform },
+    });
+  }
+
+  platforms(params?: object) {
+    return this.http.get<BlockchainPlatform[]>(`${this.url}platforms`, {
+      params: { ...params },
     });
   }
 

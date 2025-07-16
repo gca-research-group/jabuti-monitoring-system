@@ -30,7 +30,11 @@
             <mat-panel-title
               class="d-flex justify-content-between align-items-center"
             >
-              <span> {{ 'clause' | translate }} {{ clauseIndex + 1 }} </span>
+              <span>
+                {{ 'clause' | translate }} {{ clauseIndex + 1 }} ({{
+                  item.get('_id')?.value
+                }})</span
+              >
               <app-icon-button
                 icon="delete"
                 (click)="removeClause(clauseIndex)"

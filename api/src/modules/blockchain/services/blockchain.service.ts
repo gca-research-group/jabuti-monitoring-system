@@ -9,6 +9,7 @@ import {
   UpdateBlockchainDto,
 } from '@app/dtos/blockchain';
 import { BlockchainConnectionFactory } from '@app/factories';
+import { BlockchainPlatform } from '@app/models/enums';
 import { CrudBase, HyperledgerFabricConfig } from '@app/models/interfaces';
 import { Blockchain, BLOCKCHAIN_CONFIG } from '@app/models/schemas/blockchain';
 import { HyperledgerFabricConnectionService } from '@app/modules/hyperledger-fabric/services';
@@ -99,6 +100,26 @@ export class BlockchainService
 
   config(platform: keyof typeof BLOCKCHAIN_CONFIG) {
     return BLOCKCHAIN_CONFIG[platform];
+  }
+
+  platforms() {
+    return [
+      {
+        id: BlockchainPlatform.DUMMY,
+        name: BlockchainPlatform.DUMMY,
+        image: `${process.env.BACKEND_URL}/static/images/blockchain/dummy.png`,
+      },
+      {
+        id: BlockchainPlatform.ETHEREUM,
+        name: BlockchainPlatform.ETHEREUM,
+        image: `${process.env.BACKEND_URL}/static/images/blockchain/ethereum.png`,
+      },
+      {
+        id: BlockchainPlatform.HYPERLEDGER_FABRIC,
+        name: BlockchainPlatform.HYPERLEDGER_FABRIC,
+        image: `${process.env.BACKEND_URL}/static/images/blockchain/hyperledger.png`,
+      },
+    ];
   }
 
   async testConnection(id: string) {
