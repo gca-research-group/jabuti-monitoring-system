@@ -15,6 +15,7 @@ export class SmartContractInvokerService {
   ) {}
 
   async invoke(data: { id: string; payload: ContractInvokerDto }) {
+    const startExecution = new Date();
     const { blockchain, smartContract, clause, clauseArguments } = data.payload;
 
     const service = BlockchainConnectionFactory.getService(blockchain.platform);
@@ -32,16 +33,32 @@ export class SmartContractInvokerService {
         clauseArguments,
       );
 
+      const endExecution = new Date();
       await this.smartContractOutboundQueueService.send({
         id: data.id,
         payload: data.payload,
         result,
+        metadata: {
+          execution: {
+            start: startExecution,
+            end: endExecution,
+            duration: endExecution.getTime() - startExecution.getTime(),
+          },
+        },
         status: 'SUCCESS',
       });
     } catch (error) {
+      const endExecution = new Date();
       await this.smartContractOutboundQueueService.send({
         id: data.id,
         payload: data.payload,
+        metadata: {
+          execution: {
+            start: startExecution,
+            end: endExecution,
+            duration: endExecution.getTime() - startExecution.getTime(),
+          },
+        },
         result: (error as { message: string }).message,
         status: 'FAIL',
       });

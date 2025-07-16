@@ -25,6 +25,7 @@ const PayloadSchema = z.object({
 export const CreateSmartContractExecutionSchema = z.object({
   id: z.string().optional(),
   payload: PayloadSchema,
+  metadata: z.any().optional(),
   result: z.any({ message: 'RESULT_IS_REQUIRED' }),
   status: z.string(),
 });

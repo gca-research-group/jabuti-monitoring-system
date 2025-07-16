@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 
 import { UpdateSmartContractExecutionDto } from '@app/dtos/smart-contract-execution';
+import { jsonDateReviver } from '@app/utils/json-date-reviver';
 
 import { SmartContractExecutionService } from './smart-contract-execution.service';
 
@@ -36,7 +37,7 @@ export class SmartContractOutboundQueueService<T = unknown> {
   async onModuleInit() {
     try {
       await this.channelWrapper.addSetup(async (channel: ConfirmChannel) => {
-        await channel.prefetch(250);
+        await channel.prefetch(500);
 
         await channel.assertQueue(SMART_CONTRACT_OUTBOUND_DEAD_QUEUE, {
           durable: true,
@@ -52,9 +53,13 @@ export class SmartContractOutboundQueueService<T = unknown> {
 
         await channel.consume(SMART_CONTRACT_OUTBOUND_QUEUE, (message) => {
           if (message) {
-            const data = JSON.parse(message.content.toString()) as {
+            const data = JSON.parse(
+              message.content.toString(),
+              jsonDateReviver,
+            ) as {
               id: string;
               payload: unknown;
+              metadata?: unknown;
               result: unknown;
               status: string;
             };
@@ -62,6 +67,7 @@ export class SmartContractOutboundQueueService<T = unknown> {
             this.smartContractExecutionService
               .update(data.id, {
                 payload: data.payload,
+                metadata: data.metadata,
                 result: data.result,
                 status: data.status,
               } as UpdateSmartContractExecutionDto)

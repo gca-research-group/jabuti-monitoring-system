@@ -38,7 +38,7 @@ export class SmartContractExecutionQueueService {
   async onModuleInit() {
     try {
       await this.channelWrapper.addSetup(async (channel: ConfirmChannel) => {
-        await channel.prefetch(250);
+        await channel.prefetch(500);
 
         await channel.assertQueue(SMART_CONTRACT_EXECUTION_DEAD_QUEUE, {
           durable: true,

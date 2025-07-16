@@ -79,6 +79,9 @@ export class SmartContractExecution {
   @Prop({ type: MongooseSchema.Types.Mixed })
   result: unknown;
 
+  @Prop({ type: MongooseSchema.Types.Mixed })
+  metadata: unknown;
+
   @Prop({ default: 'PENDING' })
   status: string;
 }
