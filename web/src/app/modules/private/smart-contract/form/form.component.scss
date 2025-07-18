@@ -7,10 +7,10 @@
 }
 
 :host ::ng-deep .ng-select .ng-select-container .ng-value-container .ng-placeholder {
-  color: var(--mdc-outlined-text-field-hover-label-text-color, var(--mat-sys-on-surface));
+  color: var(--mat-form-field-outlined-hover-label-text-color, var(--mat-sys-on-surface));
   font-size: var(--mat-form-field-outlined-label-text-populated-size);
-  font-family: var(--mdc-outlined-text-field-label-text-font, var(--mat-sys-body-large-font));
-  font-weight: var(--mdc-outlined-text-field-label-text-weight, var(--mat-sys-body-large-weight));
-  letter-spacing: var(--mdc-outlined-text-field-label-text-tracking, var(--mat-sys-body-large-tracking));
+  font-family: var(--mat-form-field-outlined-label-text-font, var(--mat-sys-body-large-font));
+  font-weight: var(--mat-form-field-outlined-label-text-weight, var(--mat-sys-body-large-weight));
+  letter-spacing: var(--mat-form-field-outlined-label-text-tracking, var(--mat-sys-body-large-tracking));
   background-color: whitesmoke;
 }
