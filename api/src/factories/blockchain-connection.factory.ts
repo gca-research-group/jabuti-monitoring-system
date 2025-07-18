@@ -26,10 +26,9 @@ export class BlockchainConnectionFactory {
           this.instances.set(platform, new DummyConnectionService());
           break;
         default:
-          throw new BadRequestException('Unsupported blockchain platform');
+          throw new BadRequestException('UNSUPPORTED_BLOCKCHAIN_PLATFORM');
       }
     }
-
     return this.instances.get(platform)! as T;
   }
 
