@@ -1,8 +1,8 @@
 <h1 align="center">
   <br>
-  <img src="assets/logo.svg" alt="Smart Contract Execution Monitoring System" style="height: 256px">
+  <img src="assets/logo.svg" alt="Jabuti Monitoring System" style="height: 256px">
   <br>
-  Smart Contract Execution Monitoring System
+  Jabuti Monitoring System
   <br>
 </h1>
 
@@ -12,7 +12,7 @@
   <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
   <img alt="Angular" src="https://img.shields.io/badge/Angular-20232f?style=for-the-badge&logo=angular&logoColor=red" />
   <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white" />
-  <img alt="NestJS" src="https://img.shields.io/badge/NestJS-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" />
+  <img alt="Java" src="https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" />
 </p>
 
 <br/>
@@ -34,41 +34,13 @@ This open-source project aims to serve as middleware between traditional softwar
 
 ## Table of Contents
 
-* [Papers](#papers)
-* [Project Repositories](#project-repositories)
-* [Features](#features)
+* [Overview](#overview)
+* [Architecture](#architecture)
 * [How to Run](#how-to-run)
+* [Project Repositories](#project-repositories)
+* [Related Publications](#related-publications)
 * [License](#license)
 * [Contact](#contact)
-
----
-
-## Papers
-
-* **2025**
-
-  * [Proposing a Tool to Monitor Smart Contract Execution in Integration Processes](https://sol.sbc.org.br/index.php/sbsi_estendido/article/view/34617)
-  * [Towards a Smart Contract Toolkit for Application Integration](#)
-
-* **2024**
-
-  * [Jabuti CE: A Tool for Specifying Smart Contracts in the Domain of Enterprise Application Integration](https://www.scitepress.org/Link.aspx?doi=10.5220/0012413300003645)
-
-* **2022**
-
-  * [Advances in a DSL to Specify Smart Contracts for Application Integration Processes](https://sol.sbc.org.br/index.php/cibse/article/view/20962)
-  * [On the Need to Use Smart Contracts in Enterprise Application Integration](https://idus.us.es/handle/11441/140199)
-
----
-
-## Project Repositories
-
-* [Smart Contract Execution Monitoring System](https://github.com/gca-research-group/smart-contract-execution-monitoring-system)
-* [Hyperledger Fabric Development Network Manager](https://github.com/gca-research-group/hyperledger-fabric-development-network-manager)
-* [Transformation Engine](https://github.com/gca-research-group/jabuti-ce-transformation-engine)
-* [Jabuti CE (VSCode Plugin)](https://github.com/gca-research-group/jabuti-ce-vscode-plugin)
-* [Jabuti DSL Grammar](https://github.com/gca-research-group/jabuti-ce-jabuti-dsl-grammar)
-* [Jabuti XText/Xtend Implementation](https://github.com/gca-research-group/dsl-smart-contract-eai)
 
 ---
 
@@ -90,6 +62,7 @@ This open-source project aims to serve as middleware between traditional softwar
 
 * Docker
 * Node.js v22 or higher
+* Java v25 or higher
 
 ### Setup Steps
 
@@ -109,8 +82,6 @@ git clone https://github.com/gca-research-group/smart-contract-execution-monitor
 3. **Run required services**
 
 ```sh
-# MongoDB
-./.scripts/scems/mongo/up.sh
 
 # PostgreSQL
 ./.scripts/scems/postgres/up.sh
@@ -129,13 +100,7 @@ npm run start
 
 5. **Run the backend**
 
-```sh
-cd api
-npm install
-npm run migration:run
-npm run seed
-npm run start
-```
+> **Note:** Under maintenance.
 
 6. **Access the application**
 
@@ -144,6 +109,30 @@ Default credentials:
 
 * **Email**: `admin@admin.com`
 * **Password**: `admin`
+
+---
+
+## Project Repositories
+
+- [Jabuti Monitoring System](https://github.com/gca-research-group/jabuti-monitoring-system)
+- [Fabric Network Orchestrator](https://github.com/gca-research-group/fabric-network-orchestrator)
+- [Transformation Engine](https://github.com/gca-research-group/jabuti-ce-transformation-engine)
+- [Jabuti CE (VSCode Plug-in)](https://github.com/gca-research-group/jabuti-ce-vscode-plugin)
+- [Jabuti DSL Grammar](https://github.com/gca-research-group/jabuti-ce-jabuti-dsl-grammar)
+- [Jabuti XText/Xtend implementation](https://github.com/gca-research-group/dsl-smart-contract-eai)
+
+## Related Publications
+
+- 2025
+  - [Proposing a Tool to Monitor Smart Contract Execution in Integration Processes](https://sol.sbc.org.br/index.php/sbsi_estendido/article/view/34617)
+  - [Towards a Smart Contract Toolkit for Application Integration](#)
+ 
+- 2024
+  - [Jabuti CE: A Tool for Specifying Smart Contracts in the Domain of Enterprise Application Integration](https://www.scitepress.org/Link.aspx?doi=10.5220/0012413300003645)
+
+- 2022
+  - [Advances in a DSL to Specify Smart Contracts for Application Integration Processes](https://sol.sbc.org.br/index.php/cibse/article/view/20962)
+  - [On the Need to Use Smart Contracts in Enterprise Application Integration](https://idus.us.es/handle/11441/140199)
 
 ---
 
