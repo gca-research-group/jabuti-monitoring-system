@@ -5,9 +5,13 @@ export class StatusColorPipe implements PipeTransform {
   transform(key: string) {
     switch (key) {
       case 'PENDING':
-        return 'orange';
+        return 'amber';
+      case 'PROCESSING':
+        return 'purple';
       case 'SUCCESS':
         return 'green';
+      case 'QUEUED':
+        return 'blue';
       default:
         return 'red';
     }
