@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="180120261057" author="Mailson Teles Borges">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM users WHERE email = 'admin@admin.com'
+            </sqlCheck>
+        </preConditions>
+
+        <insert tableName="users">
+            <column name="name" value="Admin"/>
+            <column name="email" value="admin@admin.com"/>
+            <column name="password" value="$2y$10$SDcLRrHt1gBVaVKl/QMIk.IOSxeUpsVr9eqhoptM.MdafCxKlwdqq"/>
+            <column name="status" valueBoolean="true"/>
+            <column name="remarks" value="Initial System Admin"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

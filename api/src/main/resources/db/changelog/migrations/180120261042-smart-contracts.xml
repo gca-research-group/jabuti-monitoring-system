@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="180120261042" author="Mailson Teles Borges">
+        <createTable tableName="smart_contracts">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" primaryKeyName="pk__smart_contracts__id"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="blockchain_platform" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="text"/>
+            <column name="clauses" type="jsonb"/>
+            <column name="files" type="jsonb"/>
+            <column name="status" type="boolean" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remarks" type="text"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_by_id" type="int"/>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_by_id" type="int"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="smart_contracts" baseColumnNames="created_by_id"
+                             constraintName="fk__sc__created_by_id__u__id"
+                             referencedTableName="users" referencedColumnNames="id"
+                             onDelete="SET NULL"/>
+    </changeSet>
+</databaseChangeLog>

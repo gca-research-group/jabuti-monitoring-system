@@ -1,0 +1,59 @@
+app:
+  backend-url: http://localhost:8080
+spring:
+  application:
+    name: api
+  datasource:
+    url: jdbc:postgresql://localhost:6432/scemsdb
+    username: postgres
+    password: JbeWkB98P2xf
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      data-source-properties:
+        prepareThreshold: 0
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
+  hibernate:
+    ddl-auto: validate
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+          order_inserts: true
+          order_updates: true
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: JbeWkB98P2xf
+    listener:
+      simple:
+        default-requeue-rejected: false
+        concurrency: 20
+        max-concurrency: 20
+        prefetch: 20
+        acknowledge-mode: auto
+logging:
+  level:
+    org:
+      springframework:
+        http.converter: DEBUG
+        web: DEBUG
+        amqp: DEBUG
+    root: INFO
+  file:
+    name: logs/application
+
+jwt:
+  secret: 557d69cf-69a1-4098-987e-4b78ff9e2a71
+  expiration: 300000
+

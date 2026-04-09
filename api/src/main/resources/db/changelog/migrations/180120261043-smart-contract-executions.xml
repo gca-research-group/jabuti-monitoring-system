@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet id="180120261043" author="Mailson Teles Borges">
+        <createTable tableName="smart_contract_executions">
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" primaryKeyName="pk__smart_contract_executions__id"/>
+            </column>
+            <column name="payload" type="jsonb"/>
+            <column name="result" type="text"/>
+            <column name="metadata" type="jsonb"/>
+            <column name="status" type="varchar(255)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="remarks" type="text"/>
+            <column name="created_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_by_id" type="int"/>
+            <column name="updated_at" type="timestamp" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_by_id" type="int"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="smart_contract_executions" baseColumnNames="created_by_id"
+                                 constraintName="fk__sce__created_by_id__u__id"
+                                 referencedTableName="users" referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+    </changeSet>
+</databaseChangeLog>

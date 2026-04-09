@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="db/changelog/migrations/180120261039-users.xml"/>
+    <include file="db/changelog/migrations/180120261040-blockchains.xml"/>
+    <include file="db/changelog/migrations/180120261042-smart-contracts.xml"/>
+    <include file="db/changelog/migrations/180120261043-smart-contract-executions.xml"/>
+
+    <include file="db/changelog/seeds/180120261057-admin-user.xml" />
+
+</databaseChangeLog>
