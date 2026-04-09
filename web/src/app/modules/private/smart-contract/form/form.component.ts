@@ -62,10 +62,11 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 export class FormComponent extends BaseFormDirective<
   SmartContract,
   {
-    _id: FormControl<string | null>;
+    id: FormControl<string | null>;
     name: FormControl<string | null>;
     blockchainPlatform: FormControl<string | null>;
     clauses: FormArray;
+    status: FormControl;
   }
 > {
   readonly dialog = inject(MatDialog);
@@ -76,12 +77,13 @@ export class FormComponent extends BaseFormDirective<
 
   protected override buildForm(): void {
     this.form = this.formBuilder.group({
-      _id: new FormControl(),
+      id: new FormControl(),
       name: new FormControl('', [Validators.required]),
       blockchainPlatform: new FormControl('HYPERLEDGER_FABRIC', [
         Validators.required,
       ]),
       clauses: this.formBuilder.array([]),
+      status: new FormControl(true)
     });
   }
 
@@ -110,7 +112,6 @@ export class FormComponent extends BaseFormDirective<
   addClause(addClauseArgument = true) {
     this.clauses.push(
       this.formBuilder.group({
-        _id: null,
         name: [null, [Validators.required]],
         clauseArguments: this.formBuilder.array([]),
       }),
@@ -129,9 +130,7 @@ export class FormComponent extends BaseFormDirective<
 
     _clauseArguments.push(
       this.formBuilder.group({
-        _id: null,
         name: [null, [Validators.required]],
-        type: [null, [Validators.required]],
       }),
     );
   }
@@ -141,7 +140,6 @@ export class FormComponent extends BaseFormDirective<
     const _clauseArguments = clause.get('clauseArguments') as FormArray<
       FormGroup<{
         name: FormControl<string | null>;
-        type: FormControl<string | null>;
       }>
     >;
 
@@ -168,15 +166,13 @@ export class FormComponent extends BaseFormDirective<
       .get('clauseArguments') as FormArray<
       FormGroup<{
         name: FormControl<string | null>;
-        type: FormControl<string | null>;
       }>
     >;
 
     const _clauseArgument = _clauseArguments.at(argumentIndex);
 
     if (
-      !!_clauseArgument.get('name')?.value ||
-      _clauseArgument.get('type')?.value
+      !!_clauseArgument.get('name')?.value
     ) {
       const dialogRef = this.dialog.open(DeleteDialogComponent, {
         data: true,

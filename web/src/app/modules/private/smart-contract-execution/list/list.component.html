@@ -2,7 +2,6 @@
   <app-input
     formControlName="id"
     label="id"
-    type="number"
     [min]="1"
     class="col"
   />
@@ -30,11 +29,18 @@
   [displayedColumns]="displayedColumns"
   [dataSource]="data"
   [total]="total"
+  [isLoading]="loading"
   (loadMore)="scroll()"
   (sort)="sort($event)"
 >
   <ng-template #actionsColumn>
     <div style="display: flex; justify-content: center; width: 100%">
+      <app-icon-button
+        [icon]="toggleAutoRefresh ? 'toggle_on' : 'toggle_off'"
+        tooltip="autorefresh"
+        (click)="autoRefresh()"
+      />
+
       <app-icon-button
         icon="change_circle"
         tooltip="refresh"
@@ -54,7 +60,7 @@
         tooltip="results"
         (click)="openSmartContractExecutionDialog(element)"
       />
-      <a [routerLink]="['./', element._id]">
+      <a [routerLink]="['./', element.id]">
         <app-icon-button icon="edit_square" tooltip="edit" />
       </a>
       <app-icon-button

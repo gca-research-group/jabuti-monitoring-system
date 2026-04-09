@@ -18,6 +18,7 @@ import { BaseFormDirective } from '@app/directives/base';
 import { Blockchain } from '@app/models';
 import { BlockchainService } from '@app/services/blockchain';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
+import { JsonPipe } from '@angular/common';
 
 @Component({
   selector: 'app-blockchain-form',
@@ -27,6 +28,7 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
   imports: [
     ReactiveFormsModule,
     FormsModule,
+    JsonPipe,
 
     TranslateModule,
 
@@ -58,7 +60,7 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 export class FormComponent extends BaseFormDirective<
   Blockchain,
   {
-    _id: FormControl<string | null>;
+    id: FormControl<string | null>;
     name: FormControl<string | null>;
     platform: FormControl<string | null>;
     parameters: FormGroup;
@@ -67,7 +69,7 @@ export class FormComponent extends BaseFormDirective<
   protected override service = inject<BlockchainService>(CRUD_SERVICE);
   parameters: { field: string; type: string; description: string }[] = [];
 
-  parametersValues: object = {};
+  parametersValues: Record<string, any> = {};
 
   constructor() {
     super();
@@ -83,7 +85,7 @@ export class FormComponent extends BaseFormDirective<
 
   protected override buildForm(): void {
     this.form = this.formBuilder.group({
-      _id: new FormControl(),
+      id: new FormControl(),
       name: new FormControl('', [Validators.required]),
       platform: new FormControl('HYPERLEDGER_FABRIC', [Validators.required]),
       parameters: this.formBuilder.group({}),

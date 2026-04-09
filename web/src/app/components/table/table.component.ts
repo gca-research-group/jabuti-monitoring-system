@@ -5,6 +5,7 @@ import { NgStyle, NgTemplateOutlet } from '@angular/common';
 import { Component, inject, input, OnDestroy, output } from '@angular/core';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatTableModule } from '@angular/material/table';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { InfiniteScrollDirective } from '@app/directives/infinite-scroll';
 import { Column } from '@app/models';
@@ -23,6 +24,7 @@ import { IS_MOBILE } from '@app/tokens';
 
     MatTableModule,
     MatSortModule,
+    MatProgressSpinnerModule,
     TranslateModule,
 
     InfiniteScrollDirective,
@@ -35,6 +37,7 @@ export class TableComponent<T> implements OnDestroy {
 
   columns = input<Column[]>([]);
   height = input<string>();
+  isLoading = input<boolean>(false);
 
   loadMore = output();
   sort = output<Sort>();

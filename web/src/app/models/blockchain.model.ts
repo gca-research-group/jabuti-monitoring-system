@@ -1,5 +1,5 @@
 export interface Blockchain {
-  _id: string;
+  id: string;
   name: string;
   parameters: object;
   createdAt: Date;

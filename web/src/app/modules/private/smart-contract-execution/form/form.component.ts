@@ -68,10 +68,10 @@ export class FormComponent
   extends BaseFormDirective<
     SmartContractExecution,
     {
-      _id: FormControl<string | null>;
+      id: FormControl<string | null>;
       blockchainId: FormControl<string | null>;
       smartContractId: FormControl<string | null>;
-      clauseId: FormControl<string | null>;
+      clauseName: FormControl<string | null>;
       clauseArguments: FormArray;
     }
   >
@@ -109,9 +109,9 @@ export class FormComponent
         this.smartContractId = value;
 
         if (value) {
-          this.form.get('clauseId')?.enable();
+          this.form.get('clauseName')?.enable();
         } else {
-          this.form.get('clauseId')?.disable();
+          this.form.get('clauseName')?.disable();
         }
       });
   }
@@ -124,15 +124,14 @@ export class FormComponent
 
   protected override patchValue(item: SmartContractExecution) {
     this.form.patchValue({
-      blockchainId: item.payload.blockchain.id,
-      smartContractId: item.payload.smartContract.id,
-      clauseId: item.payload.clause.id,
+      blockchainId: item.payload?.blockchain?.id,
+      smartContractId: item.payload?.smartContract?.id,
+      clauseName: item.payload?.clauseName,
     });
 
-    for (const clauseArgument of item.payload.clauseArguments ?? []) {
+    for (const clauseArgument of item.payload?.clauseArguments ?? []) {
       this.clauseArguments?.push(
         this.formBuilder.group({
-          id: clauseArgument.id,
           name: clauseArgument.name,
           value: [clauseArgument.value, [Validators.required]],
         }),
@@ -142,15 +141,15 @@ export class FormComponent
 
   protected override buildForm(): void {
     this.form = this.formBuilder.group({
-      _id: new FormControl(),
+      id: new FormControl(),
       blockchainId: new FormControl('', [Validators.required]),
       smartContractId: new FormControl('', [Validators.required]),
-      clauseId: new FormControl('', [Validators.required]),
+      clauseName: new FormControl('', [Validators.required]),
       clauseArguments: this.formBuilder.array([]),
     });
 
     this.form.get('smartContractId')?.disable();
-    this.form.get('clauseId')?.disable();
+    this.form.get('clauseName')?.disable();
   }
 
   protected override updateFormOnUpdateInitialization(): void {}
@@ -185,7 +184,6 @@ export class FormComponent
     for (const item of items) {
       this.clauseArguments?.push(
         this.formBuilder.group({
-          id: item._id,
           name: item.name,
           value: [null, [Validators.required]],
         }),

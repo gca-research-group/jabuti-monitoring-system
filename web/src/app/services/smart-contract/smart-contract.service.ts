@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
 })
 export class SmartContractService implements CrudService<SmartContract> {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/smart-contract/`;
+  private readonly url = `${environment.apiUrl}/smart-contract`;
 
   findAll(params?: object) {
     return this.http.get<FindAllResponse<SmartContract>>(this.url, {
@@ -19,16 +19,16 @@ export class SmartContractService implements CrudService<SmartContract> {
   }
 
   findById(id: number) {
-    return this.http.get<SmartContract>(`${this.url}${id}`);
+    return this.http.get<SmartContract>(`${this.url}/${id}`);
   }
 
   delete(id: string) {
-    return this.http.delete<void>(`${this.url}${id}`);
+    return this.http.delete<void>(`${this.url}/${id}`);
   }
 
   save(item: SmartContract) {
-    if (item._id) {
-      return this.http.put<SmartContract>(`${this.url}${item._id}`, item);
+    if (item.id) {
+      return this.http.put<SmartContract>(`${this.url}/${item.id}`, item);
     }
 
     return this.http.post<SmartContract>(this.url, item);
@@ -37,12 +37,12 @@ export class SmartContractService implements CrudService<SmartContract> {
   execute(item: {
     blockchainId: string;
     smartContractId: string;
-    clauseId: string;
+    clauseName: string;
     arguments?: {
-      id: string;
+      name: string;
       value: string;
     }[];
   }) {
-    return this.http.post<void>(`${this.url}execute/`, item);
+    return this.http.post<void>(`${this.url}/execute`, item);
   }
 }

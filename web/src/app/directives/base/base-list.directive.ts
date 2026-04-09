@@ -1,5 +1,5 @@
 import { ToastrService } from 'ngx-toastr';
-import { debounceTime, Subject, takeUntil } from 'rxjs';
+import { debounceTime, finalize, Subject, Subscription, takeUntil } from 'rxjs';
 
 import {
   Directive,
@@ -45,6 +45,7 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
   protected breadCrumb = inject(BREADCRUMB);
 
   protected onDestroy$ = new Subject();
+  private searchSubscription$?: Subscription;
 
   data: T[] = [];
   total = 0;
@@ -74,7 +75,7 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
 
   private buildForm() {
     this.form = this.formBuilder.group({
-      page: new FormControl(1),
+      page: new FormControl(0),
       pageSize: new FormControl(20),
       orderBy: new FormControl(null),
       orderDirection: new FormControl(null),
@@ -167,25 +168,31 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
     const _params = removeEmptyKeys<Record<string, string | number>>(
       this.form.value as Record<string, FormControl>,
     );
-    _params['page'] = 1;
+    _params['page'] = 0;
 
-    this.service.findAll(_params).subscribe({
-      next: response => {
-        this.data = response.data;
-        this.hasMore = response.hasMore;
-        this.total = response.total;
-      },
-      error: error => {
-        console.log('[error]', error);
-      },
-    });
+    this.loading = true;
+    this.searchSubscription$?.unsubscribe();
+
+    this.searchSubscription$ = this.service
+      .findAll(_params)
+      .pipe(finalize(() => (this.loading = false)))
+      .subscribe({
+        next: response => {
+          this.data = response.data;
+          this.hasMore = response.hasMore;
+          this.total = response.total;
+        },
+        error: error => {
+          console.log('[error]', error);
+        },
+      });
   }
 
   sort(event: Sort) {
     this.form.patchValue({
       orderBy: event.active,
       orderDirection: event.direction,
-      page: 1,
+      page: 0,
     });
   }
 }

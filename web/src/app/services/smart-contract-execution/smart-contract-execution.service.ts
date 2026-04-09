@@ -16,7 +16,7 @@ export class SmartContractExecutionService
   implements CrudService<SmartContractExecution>
 {
   private readonly http = inject(HttpClient);
-  private readonly url = `${environment.apiUrl}/smart-contract-execution/`;
+  private readonly url = `${environment.apiUrl}/smart-contract-execution`;
 
   findAll(params?: object) {
     return this.http.get<FindAllResponse<SmartContractExecution>>(this.url, {
@@ -25,11 +25,11 @@ export class SmartContractExecutionService
   }
 
   findById(id: number) {
-    return this.http.get<SmartContractExecution>(`${this.url}${id}`);
+    return this.http.get<SmartContractExecution>(`${this.url}/${id}`);
   }
 
   delete(id: string) {
-    return this.http.delete<void>(`${this.url}${id}`);
+    return this.http.delete<void>(`${this.url}/${id}`);
   }
 
   deleteAll() {
@@ -37,9 +37,9 @@ export class SmartContractExecutionService
   }
 
   save(item: SmartContractExecution) {
-    if (item._id) {
+    if (item.id) {
       return this.http.put<SmartContractExecution>(
-        `${this.url}${item._id}`,
+        `${this.url}/${item.id}`,
         item,
       );
     }

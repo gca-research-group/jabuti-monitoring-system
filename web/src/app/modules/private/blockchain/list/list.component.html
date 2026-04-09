@@ -1,6 +1,6 @@
 <form [formGroup]="form" class="mb-3 d-flex" style="gap: 8px" #filters>
   <app-input
-    formControlName="_id"
+    formControlName="id"
     label="id"
     class="col"
   />
@@ -25,7 +25,7 @@
   </ng-template>
   <ng-template #actionsRow let-element="element">
     <div style="display: flex; justify-content: center; width: 100%">
-      <a [routerLink]="['./', element._id]">
+      <a [routerLink]="['./', element.id]">
         <app-icon-button icon="edit_square" tooltip="edit" />
       </a>
       <app-icon-button
@@ -36,7 +36,7 @@
       <app-icon-button
         icon="play_circle"
         tooltip="test-blockchain-connection"
-        (click)="testConnection(element._id)"
+        (click)="testConnection(element.id)"
       />
     </div>
   </ng-template>

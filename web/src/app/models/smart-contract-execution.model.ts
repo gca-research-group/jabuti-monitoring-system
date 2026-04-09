@@ -8,13 +8,7 @@ interface SmartContract {
   name: string;
 }
 
-interface Clause {
-  id: string;
-  name: string;
-}
-
 interface Argument {
-  id: string;
   name: string;
   value: string;
 }
@@ -22,12 +16,12 @@ interface Argument {
 interface SmartContractExecutionPayload {
   blockchain: Blockchain;
   smartContract: SmartContract;
-  clause: Clause;
+  clauseName: string;
   clauseArguments: Argument[];
 }
 
 export interface SmartContractExecution {
-  _id: string;
+  id: string;
   payload: SmartContractExecutionPayload;
   result: unknown;
   createdAt: Date;

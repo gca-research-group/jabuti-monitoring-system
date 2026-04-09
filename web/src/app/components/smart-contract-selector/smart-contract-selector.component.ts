@@ -44,11 +44,11 @@ export class SmartContractSelectorComponent extends BaseSelectorDirective {
               response.data as {
                 name: string;
                 blockchainPlatform: string;
-                _id: string;
+                id: string;
               }[]
             ).map(item => ({
               name: item.name,
-              id: item._id,
+              id: item.id,
               blockchainPlatform: item.blockchainPlatform,
             })) as Selector[],
           );

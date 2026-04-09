@@ -68,8 +68,9 @@ export class SmartContractClauseSelectorComponent
 
     this.formControl.valueChanges
       .pipe(takeUntil(this.onDestroy$))
-      .subscribe(clauseId => {
-        const clause = this._items.find(item => item._id === clauseId);
+      .subscribe(clauseName => {
+        console.log('[clauseName]', clauseName);
+        const clause = this._items.find(item => item.name === clauseName);
         if (clause?.clauseArguments?.length) {
           this.arguments.emit(clause?.clauseArguments);
         }
@@ -80,7 +81,7 @@ export class SmartContractClauseSelectorComponent
         this._items = (response as SmartContract).clauses ?? [];
         this.items.set(
           ((response as SmartContract).clauses ?? []).map(item => ({
-            id: item._id,
+            id: item.name,
             name: item.name,
           })),
         );

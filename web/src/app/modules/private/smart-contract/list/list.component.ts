@@ -15,7 +15,7 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 
 const COLUMNS: Column[] = [
   {
-    id: '_id',
+    id: 'id',
     label: 'id',
   },
   {
@@ -113,7 +113,7 @@ export class ListComponent extends BaseListDirective<
   override getCurrentItemId(
     item: SmartContract,
   ): string | number | null | undefined {
-    return item._id;
+    return item.id;
   }
 
   updateRouteQueryParameters() {

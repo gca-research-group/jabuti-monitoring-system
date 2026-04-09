@@ -57,9 +57,13 @@
       >
         @if (dataSource().length) {
           <small
-            style="display: block"
-            [style.textAlign]="isMobile ? 'left' : 'right'"
+            style="display: flex; align-items: center; gap: 8px"
+            [style.justifyContent]="isMobile ? 'left' : 'right'"
           >
+            @if (isLoading()){
+              <mat-spinner [diameter]="20" />
+            }
+
             {{
               'diplaying-itens'
                 | translate: { current: dataSource().length, total: total() }

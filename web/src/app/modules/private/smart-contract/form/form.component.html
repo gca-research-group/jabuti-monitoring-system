@@ -4,7 +4,6 @@
   (ngSubmit)="save()"
 >
   <app-input
-    placeholder="name"
     formControlName="name"
     label="name"
     class="col"
@@ -32,7 +31,7 @@
             >
               <span>
                 {{ 'clause' | translate }} {{ clauseIndex + 1 }} ({{
-                  item.get('_id')?.value
+                  item.get('name')?.value
                 }})</span
               >
               <app-icon-button
@@ -45,7 +44,6 @@
           <div class="d-flex align-items-center mb-3" style="gap: 8px">
             <app-input
               formControlName="name"
-              placeholder="name"
               label="name"
               class="col"
             />
@@ -89,15 +87,7 @@
                   <div class="d-flex align-items-center" style="gap: 8px">
                     <app-input
                       formControlName="name"
-                      placeholder="name"
                       label="name"
-                      class="col"
-                    />
-
-                    <app-input
-                      formControlName="type"
-                      placeholder="type"
-                      label="type"
                       class="col"
                     />
                   </div>

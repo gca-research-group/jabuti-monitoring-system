@@ -20,16 +20,24 @@ export class SmartContractExecutionStatusSelectorComponent extends CustomControl
       name: 'all',
     },
     {
+      id: 'PENDING',
+      name: 'pending',
+    },
+    {
+      id: 'QUEUED',
+      name: 'queued',
+    },
+    {
+      id: 'PROCESSING',
+      name: 'processing',
+    },
+    {
       id: 'SUCCESS',
       name: 'success',
     },
     {
-      id: 'FAIL',
-      name: 'fail',
-    },
-    {
-      id: 'PENDING',
-      name: 'pending',
+      id: 'ERROR',
+      name: 'error',
     },
   ];
 }

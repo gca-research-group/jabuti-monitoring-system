@@ -28,7 +28,7 @@ const COLUMNS: Column[] = [
     sortable: false,
   },
   {
-    id: '_id',
+    id: 'id',
     label: 'id',
   },
   {
@@ -119,7 +119,7 @@ export class ListComponent
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private succeededRow = viewChild<TemplateRef<any>>('succeededRow');
 
-  toggleAutoRefresh = true;
+  toggleAutoRefresh = false;
 
   override ngOnDestroy(): void {
     super.ngOnDestroy();
@@ -171,7 +171,7 @@ export class ListComponent
   override getCurrentItemId(
     item: SmartContractExecution,
   ): string | number | null | undefined {
-    return item._id;
+    return item.id;
   }
 
   updateRouteQueryParameters() {
@@ -197,11 +197,13 @@ export class ListComponent
   }
 
   autoRefresh() {
-    const TEN_SECONDS = 5000;
+    const TIME = 3_000;
+
+    this.toggleAutoRefresh = !this.toggleAutoRefresh;
 
     this.subscription?.unsubscribe();
 
-    this.subscription = interval(TEN_SECONDS)
+    this.subscription = interval(TIME)
       .pipe(
         tap(() => {
           if (!this.toggleAutoRefresh) {
