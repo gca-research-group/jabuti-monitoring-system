@@ -21,7 +21,6 @@ public class BenchmarkService {
 
     public void stop() {
         registry.stop();
-        purgeAll();
     }
 
     public void purgeAll() {

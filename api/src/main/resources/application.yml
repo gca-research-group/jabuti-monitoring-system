@@ -4,7 +4,7 @@ spring:
   application:
     name: api
   datasource:
-    url: jdbc:postgresql://localhost:6432/scemsdb
+    url: jdbc:postgresql://localhost:5432/scemsdb
     username: postgres
     password: JbeWkB98P2xf
     hikari:
@@ -13,8 +13,6 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-      data-source-properties:
-        prepareThreshold: 0
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml

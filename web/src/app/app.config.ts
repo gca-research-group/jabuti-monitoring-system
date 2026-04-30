@@ -2,6 +2,16 @@ import { provideTranslateService, TranslateLoader } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 import { withNgxsStoragePlugin } from '@ngxs/storage-plugin';
 import { provideStore } from '@ngxs/store';
+import { LineChart, BarChart } from 'echarts/charts';
+import {
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+} from 'echarts/components';
+import * as echarts from 'echarts/core';
+import { CanvasRenderer } from 'echarts/renderers';
+import { provideEchartsCore } from 'ngx-echarts';
 import { provideToastr } from 'ngx-toastr';
 
 import { DatePipe, registerLocaleData } from '@angular/common';
@@ -25,6 +35,17 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { requestInterceptor } from './interceptors';
 import { UserState } from './state/current-user';
+
+echarts.use([
+  LineChart,
+  BarChart,
+
+  TitleComponent,
+  TooltipComponent,
+  GridComponent,
+  LegendComponent,
+  CanvasRenderer,
+]);
 
 registerLocaleData(localeES, 'es');
 registerLocaleData(localePT, 'pt');
@@ -64,5 +85,6 @@ export const appConfig: ApplicationConfig = {
     },
     [{ provide: LOCALE_ID, useFactory: () => navigator.language }],
     DatePipe,
+    provideEchartsCore({ echarts }),
   ],
 };
