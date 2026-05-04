@@ -2,11 +2,11 @@ package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionDto;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionFilterDto;
+import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.services.SmartContractExecutionService;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
@@ -17,5 +17,10 @@ public class SmartContractExecutionResource extends BaseResource<SmartContractEx
     @DeleteMapping()
     public void removeAll() {
         this.service.removeAll();
+    }
+
+    @PostMapping("/execute")
+    public void execute(@RequestBody SmartContractQueueInboundEventDto dto)  {
+        this.service.execute(dto);
     }
 }

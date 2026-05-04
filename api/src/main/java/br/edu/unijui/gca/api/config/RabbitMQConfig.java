@@ -18,18 +18,18 @@ public class RabbitMQConfig {
 
     @Bean
     public DirectExchange exchange() {
-        return new DirectExchange("smart-contract-exchange");
+        return new DirectExchange(QueueNames.MAIN_EXCHANGE);
     }
 
     @Bean
     public DirectExchange inboundDlx() {
-        return new DirectExchange("smart-contract-inbound.dlx");
+        return new DirectExchange(QueueNames.INBOUND_DEAD_LETTER_EXCHANGE);
     }
 
     @Bean
     public Queue inboundDlq() {
         return QueueBuilder
-                .durable("smart-contract-inbound.dlq")
+                .durable(QueueNames.INBOUND_DEAD_LETTER_QUEUE)
                 .build();
     }
 
@@ -38,15 +38,15 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(inboundDlq())
                 .to(inboundDlx())
-                .with("smart-contract-inbound.dlq-routing-key");
+                .with(QueueNames.INBOUND_DEAD_LETTER_QUEUE_ROUTING_KEY);
     }
 
     @Bean
     public Queue inbound() {
         return QueueBuilder
-                .durable("smart-contract-inbound-queue")
-                .deadLetterExchange("smart-contract-inbound.dlx")
-                .deadLetterRoutingKey("smart-contract-inbound.dlq-routing-key")
+                .durable(QueueNames.INBOUND_QUEUE)
+                .deadLetterExchange(QueueNames.INBOUND_DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(QueueNames.INBOUND_DEAD_LETTER_QUEUE_ROUTING_KEY)
                 .build();
     }
 
@@ -55,18 +55,18 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(inbound())
                 .to(exchange())
-                .with("smart-contract-inbound-routing-key");
+                .with(QueueNames.INBOUND_ROUTING_KEY);
     }
 
     @Bean
     public DirectExchange executionDlx() {
-        return new DirectExchange("smart-contract-execution.dlx");
+        return new DirectExchange(QueueNames.EXECUTION_DEAD_LETTER_EXCHANGE);
     }
 
     @Bean
     public Queue executionDlq() {
         return QueueBuilder
-                .durable("smart-contract-execution.dlq")
+                .durable(QueueNames.EXECUTION_DEAD_LETTER_QUEUE)
                 .build();
     }
 
@@ -75,15 +75,15 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(executionDlq())
                 .to(executionDlx())
-                .with("smart-contract-execution.dlq-routing-key");
+                .with(QueueNames.EXECUTION_DEAD_LETTER_QUEUE_ROUTING_KEY);
     }
 
     @Bean
     public Queue execution() {
         return QueueBuilder
-                .durable("smart-contract-execution-queue")
-                .deadLetterExchange("smart-contract-execution.dlx")
-                .deadLetterRoutingKey("smart-contract-execution.dlq-routing-key")
+                .durable(QueueNames.EXECUTION_QUEUE)
+                .deadLetterExchange(QueueNames.EXECUTION_DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(QueueNames.EXECUTION_DEAD_LETTER_QUEUE_ROUTING_KEY)
                 .build();
     }
 
@@ -92,19 +92,18 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(execution())
                 .to(exchange())
-                .with("smart-contract-execution-routing-key");
+                .with(QueueNames.EXECUTION_ROUTING_KEY);
     }
-
 
     @Bean
     public DirectExchange outboundDlx() {
-        return new DirectExchange("smart-contract-outbound.dlx");
+        return new DirectExchange(QueueNames.OUTBOUND_DEAD_LETTER_EXCHANGE);
     }
 
     @Bean
     public Queue outboundDlq() {
         return QueueBuilder
-                .durable("smart-contract-outbound.dlq")
+                .durable(QueueNames.OUTBOUND_DEAD_LETTER_QUEUE)
                 .build();
     }
 
@@ -113,15 +112,15 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(outboundDlq())
                 .to(outboundDlx())
-                .with("smart-contract-outbound.dlq-routing-key");
+                .with(QueueNames.OUTBOUND_DEAD_LETTER_QUEUE_ROUTING_KEY);
     }
 
     @Bean
     public Queue outbound() {
         return QueueBuilder
-                .durable("smart-contract-outbound-queue")
-                .deadLetterExchange("smart-contract-outbound.dlx")
-                .deadLetterRoutingKey("smart-contract-outbound.dlq-routing-key")
+                .durable(QueueNames.OUTBOUND_QUEUE)
+                .deadLetterExchange(QueueNames.OUTBOUND_DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey(QueueNames.OUTBOUND_DEAD_LETTER_QUEUE_ROUTING_KEY)
                 .build();
     }
 
@@ -130,7 +129,7 @@ public class RabbitMQConfig {
         return BindingBuilder
                 .bind(outbound())
                 .to(exchange())
-                .with("smart-contract-outbound-routing-key");
+                .with(QueueNames.OUTBOUND_ROUTING_KEY);
     }
 
     @Bean

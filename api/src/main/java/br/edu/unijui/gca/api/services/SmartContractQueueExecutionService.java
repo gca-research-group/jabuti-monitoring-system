@@ -1,6 +1,6 @@
 package br.edu.unijui.gca.api.services;
 
-import br.edu.unijui.gca.api.dtos.SmartContractExecutionDto;
+import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
@@ -14,6 +14,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Map;
 
 @Slf4j
@@ -34,11 +35,14 @@ public class SmartContractQueueExecutionService {
     @Autowired
     private AmqpTemplate amqpTemplate;
 
-    @RabbitListener(queues = {"smart-contract-execution-queue"})
+    @RabbitListener(queues = {QueueNames.EXECUTION_QUEUE})
     public void process(SmartContractPayloadDto payload) throws JsonProcessingException {
+        Instant consumedAt = Instant.now();
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(payload.getId());
 
         try {
+            smartContractExecution.setExecutionQueueConsumedAt(consumedAt);
+            smartContractExecution.setExecutionQueueProcessingStartedAt(Instant.now());
             smartContractExecution.setStatus("PROCESSING");
             smartContractExecutionService.update(smartContractExecution);
 
@@ -57,18 +61,25 @@ public class SmartContractQueueExecutionService {
 
             smartContractExecution.setStatus("SUCCESS");
             smartContractExecution.setResult(result);
+            smartContractExecution.setExecutionQueueProcessedAt(Instant.now());
+
+            smartContractExecutionService.update(smartContractExecution);
 
             amqpTemplate.convertAndSend(
-                    "smart-contract-exchange",
-                    "smart-contract-outbound-routing-key",
-                    smartContractExecutionMapper.toDto(smartContractExecution));
+                QueueNames.MAIN_EXCHANGE,
+                QueueNames.OUTBOUND_ROUTING_KEY,
+                smartContractExecutionMapper.toDto(smartContractExecution));
+
+            smartContractExecution.setOutboundQueuePublishedAt(Instant.now());
+            smartContractExecutionService.update(smartContractExecution);
+
         } catch(Throwable t) {
             smartContractExecution.setStatus("ERROR");
             smartContractExecution.setResult(objectMapper.writeValueAsString(Map.of("error", t.getMessage())));
 
             amqpTemplate.convertAndSend(
-                "smart-contract-exchange",
-                "smart-contract-outbound-routing-key",
+                QueueNames.MAIN_EXCHANGE,
+                QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
 
             throw new AmqpRejectAndDontRequeueException(t);

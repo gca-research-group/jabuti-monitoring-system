@@ -53,5 +53,5 @@ logging:
 
 jwt:
   secret: 557d69cf-69a1-4098-987e-4b78ff9e2a71
-  expiration: 300000
+  expiration: 86400000
 

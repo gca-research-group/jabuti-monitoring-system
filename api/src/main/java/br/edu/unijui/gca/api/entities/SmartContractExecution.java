@@ -19,29 +19,84 @@ import java.util.UUID;
 @Setter
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-@Table(name="smart_contract_executions")
+@Table(name = "smart_contract_executions")
 public class SmartContractExecution {
+
     @Id
-    @GeneratedValue
     @UuidGenerator
     @Column
     private UUID id;
+
+    @Column
+    private String executionId;
+
+    @Column
+    private String groupId;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private SmartContractPayloadDto payload;
 
+    @Column
     private String result;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
 
-    @Column()
+    @Column(nullable = false)
     private String status;
 
     @Column
     private String remarks;
+
+    /*
+     * Inbound queue tracking
+     */
+
+    @Column
+    private Instant inboundQueuePublishedAt;
+
+    @Column
+    private Instant inboundQueueConsumedAt;
+
+    @Column
+    private Instant inboundQueueProcessingStartedAt;
+
+    @Column
+    private Instant inboundQueueProcessedAt;
+
+    /*
+     * Execution queue tracking
+     */
+
+    @Column
+    private Instant executionQueuePublishedAt;
+
+    @Column
+    private Instant executionQueueConsumedAt;
+
+    @Column
+    private Instant executionQueueProcessingStartedAt;
+
+    @Column
+    private Instant executionQueueProcessedAt;
+
+    /*
+     * Outbound queue tracking
+     */
+
+    @Column
+    private Instant outboundQueuePublishedAt;
+
+    @Column
+    private Instant outboundQueueConsumedAt;
+
+    @Column
+    private Instant outboundQueueProcessingStartedAt;
+
+    @Column
+    private Instant outboundQueueProcessedAt;
 
     @CreatedDate
     @Column
