@@ -161,7 +161,7 @@ export class FormComponent
     }
 
     this.loading = true;
-    this.smartContractService
+    this.service
       .execute(removeEmptyKeys(this.form.value))
       .pipe(
         finalize(() => {

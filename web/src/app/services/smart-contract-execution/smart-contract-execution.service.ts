@@ -46,4 +46,16 @@ export class SmartContractExecutionService
 
     return this.http.post<SmartContractExecution>(this.url, item);
   }
+
+  execute(item: {
+    blockchainId: string;
+    smartContractId: string;
+    clauseName: string;
+    arguments?: {
+      name: string;
+      value: string;
+    }[];
+  }) {
+    return this.http.post<void>(`${this.url}/execute`, item);
+  }
 }
