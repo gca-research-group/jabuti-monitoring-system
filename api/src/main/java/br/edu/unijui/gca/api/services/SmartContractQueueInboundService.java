@@ -10,14 +10,13 @@ import br.edu.unijui.gca.api.exceptions.*;
 import br.edu.unijui.gca.api.mappers.BlockchainMapper;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.mappers.SmartContractMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
@@ -52,7 +51,7 @@ public class SmartContractQueueInboundService {
     private ObjectMapper objectMapper;
 
     @RabbitListener(queues = {QueueNames.INBOUND_QUEUE})
-    public void process(SmartContractQueueInboundEventDto event)  throws JsonProcessingException {
+    public void process(SmartContractQueueInboundEventDto event) {
         Instant consumedAt = Instant.now();
         /*SmartContractExecutionDto smartContractExecutionDto = SmartContractExecutionDto.builder()
                 .status("PENDING")

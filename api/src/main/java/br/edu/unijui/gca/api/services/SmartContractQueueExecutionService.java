@@ -5,14 +5,13 @@ import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
@@ -36,7 +35,7 @@ public class SmartContractQueueExecutionService {
     private AmqpTemplate amqpTemplate;
 
     @RabbitListener(queues = {QueueNames.EXECUTION_QUEUE})
-    public void process(SmartContractPayloadDto payload) throws JsonProcessingException {
+    public void process(SmartContractPayloadDto payload) {
         Instant consumedAt = Instant.now();
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(payload.getId());
 

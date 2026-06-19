@@ -5,7 +5,6 @@ import br.edu.unijui.gca.api.dtos.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.services.SmartContractExecutionService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
