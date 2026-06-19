@@ -9,6 +9,7 @@ import br.edu.unijui.gca.api.interfaces.IRepository;
 import br.edu.unijui.gca.api.specifications.ISpecification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -33,7 +34,8 @@ public abstract class BaseService<
     protected Mapper mapper;
 
     public FindAllResponseDto<List<Entity>> findAll(FilterDto dto, Pageable pageable) {
-        return FindAllResponseMapper.fromPage(repository.findAll(specification.build(dto), pageable));
+        Slice<Entity> data = repository.findBy(specification.build(dto), query -> query.slice(pageable));
+        return FindAllResponseMapper.fromSlice(data);
     }
 
     public Entity findById(IdentifierType id) {
