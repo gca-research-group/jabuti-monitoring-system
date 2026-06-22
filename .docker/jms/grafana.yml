@@ -1,20 +1,20 @@
 services:
-  scems_grafana:
-    container_name: scems_grafana 
+  jms_grafana:
+    container_name: jms_grafana 
     image: grafana/grafana:latest
     env_file: ./envs/.env.grafana
     ports:
       - "3300:3000"
     volumes:
       - ./volumes/grafana/provisioning:/etc/grafana/provisioning
-      - scems_grafana_volume:/var/lib/grafana
+      - jms_grafana_volume:/var/lib/grafana
     networks:
-      - scems_network
+      - jms_network
     restart: unless-stopped
 
 volumes:
-  scems_grafana_volume:
-    name: scems_grafana_volume
+  jms_grafana_volume:
+    name: jms_grafana_volume
     driver: local
     driver_opts:
       type: none

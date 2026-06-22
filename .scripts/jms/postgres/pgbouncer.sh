@@ -1,14 +1,14 @@
 #!/bin/bash
 set -e
 
-DIRECTORY=./.docker/scems/volumes/postgres/data
-COMPOSE_DIR=./.docker/scems
+DIRECTORY=./.docker/jms/volumes/postgres/data
+COMPOSE_DIR=./.docker/jms
 ROOT_DIR=$(pwd)
-POSTGRES_SERVICE=scems_postgres
+POSTGRES_SERVICE=jms_postgres
 POSTGRES_USER=postgres
-POSTGRES_DB=scemsdb
+POSTGRES_DB=jmsdb
 POSTGRES_PORT=5432
-PGBOUNCER_SERVICE=scems_pgbouncer
+PGBOUNCER_SERVICE=jms_pgbouncer
 
 if [[ ! -d "$DIRECTORY" ]]; then
   mkdir -p "$DIRECTORY"
@@ -45,8 +45,8 @@ postgresExporterUser() {
       END IF;
 
       -- Grant CONNECT on database if not already granted
-      IF NOT has_database_privilege('postgres_exporter', 'scemsdb', 'CONNECT') THEN
-        GRANT CONNECT ON DATABASE scemsdb TO postgres_exporter;
+      IF NOT has_database_privilege('postgres_exporter', 'jmsdb', 'CONNECT') THEN
+        GRANT CONNECT ON DATABASE jmsdb TO postgres_exporter;
       END IF;
 
       -- Grant pg_monitor role if not already a member

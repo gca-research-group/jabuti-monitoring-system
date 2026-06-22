@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-DIRECTORY=./.docker/scems/volumes/postgres/data
-COMPOSE_DIR=./.docker/scems
+DIRECTORY=./.docker/jms/volumes/postgres/data
+COMPOSE_DIR=./.docker/jms
 ROOT_DIR=$(pwd)
 
 if [[ ! -d "$DIRECTORY" ]]; then

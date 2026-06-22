@@ -1,12 +1,12 @@
 services:
-  scems_prometheus:
-    container_name: scems_prometheus
+  jms_prometheus:
+    container_name: jms_prometheus
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
       - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - scems_prometheus_volume:/prometheus
+      - jms_prometheus_volume:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -14,12 +14,12 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     networks:
-      - scems_network
+      - jms_network
     restart: unless-stopped
 
 volumes:
-  scems_prometheus_volume:
-    name: scems_prometheus_volume
+  jms_prometheus_volume:
+    name: jms_prometheus_volume
     driver: local
     driver_opts:
       type: none

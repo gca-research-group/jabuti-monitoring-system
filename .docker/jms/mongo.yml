@@ -1,20 +1,20 @@
 services:
-  scems_mongo:
-    container_name: scems_mongo
+  jms_mongo:
+    container_name: jms_mongo
     image: mongo:latest
     ports:
       - "27017:27017"
     env_file:
       - envs/.env.mongo
     networks:
-      - scems_network
+      - jms_network
     restart: unless-stopped
     volumes:
-      - scems_mongo_volume:/data/db
+      - jms_mongo_volume:/data/db
 
 volumes:
-  scems_mongo_volume:
-    name: scems_mongo_volume
+  jms_mongo_volume:
+    name: jms_mongo_volume
     driver: local
     driver_opts:
       type: none
