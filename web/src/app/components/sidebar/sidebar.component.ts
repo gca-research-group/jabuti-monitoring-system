@@ -112,7 +112,10 @@ export class SidebarComponent implements OnInit, OnDestroy {
   }
 
   setUp() {
-    this.currentUrl = this.router.url;
+    this.currentUrl = this.router.url.split("?").at(0);
+    if (this.currentUrl?.startsWith('/')) {
+      this.currentUrl = this.currentUrl.replace('/', '')
+    }
 
     this.items().forEach((item, index) => {
       if (item.children) {
