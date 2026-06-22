@@ -47,11 +47,14 @@ public abstract class BaseService<
     }
 
     public Entity create(EntityDto dto) {
-        return repository.save(mapper.toEntity(dto));
+        Entity entity = mapper.toEntity(dto);
+        return repository.save(entity);
     }
 
     public Entity update(IdentifierType id, EntityDto dto) {
-        return repository.save(mapper.toEntity(findById(id), dto));
+        Entity entity = findById(id);
+        mapper.updateEntity(dto, entity);
+        return repository.save(entity);
     }
 
     public Entity update(Entity entity) {

@@ -2,6 +2,7 @@ package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionDto;
+import br.edu.unijui.gca.api.dtos.SmartContractExecutionEventDto;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class SmartContractExecutionService  extends BaseService<
+public class SmartContractExecutionService extends BaseService<
         SmartContractExecution,
         UUID,
         SmartContractExecutionDto,
@@ -25,6 +26,9 @@ public class SmartContractExecutionService  extends BaseService<
         SmartContractExecutionRepository,
         SmartContractExecutionSpecification,
         SmartContractExecutionMapper> {
+
+    @Autowired
+    private SmartContractExecutionEventService smartContractExecutionEventService;
 
     @Autowired
     private AmqpTemplate amqpTemplate;
@@ -39,12 +43,13 @@ public class SmartContractExecutionService  extends BaseService<
                 .metadata(Map.of("event", event))
                 .executionId(event.getExecutionId())
                 .groupId(event.getGroupId())
-                .inboundQueuePublishedAt(Instant.now())
                 .build();
 
         SmartContractExecution smartContractExecution = create(smartContractExecutionDto);
 
         event.setId(smartContractExecution.getId());
+
+        smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.published", Instant.now());
 
         amqpTemplate.convertAndSend(
                 QueueNames.MAIN_EXCHANGE,

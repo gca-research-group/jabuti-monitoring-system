@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.config;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,10 +11,9 @@ import org.springframework.context.annotation.Configuration;
 public class RabbitMQConfig {
 
     @Bean
-    public Jackson2JsonMessageConverter jacksonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+    public JacksonJsonMessageConverter jacksonMessageConverter() {
+        return new JacksonJsonMessageConverter();
     }
-
 
     @Bean
     public DirectExchange exchange() {

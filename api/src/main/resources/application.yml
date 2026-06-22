@@ -4,7 +4,7 @@ spring:
   application:
     name: api
   datasource:
-    url: jdbc:postgresql://localhost:5432/scemsdb
+    url: jdbc:postgresql://localhost:5432/jmsdb
     username: postgres
     password: JbeWkB98P2xf
     hikari:
@@ -16,9 +16,9 @@ spring:
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
-  hibernate:
-    ddl-auto: validate
   jpa:
+    hibernate:
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:

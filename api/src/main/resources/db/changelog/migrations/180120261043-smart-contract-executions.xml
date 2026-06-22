@@ -25,23 +25,6 @@
 
             <column name="remarks" type="text"/>
 
-            <!-- Queue tracking -->
-
-            <column name="inbound_queue_published_at" type="timestamp"/>
-            <column name="inbound_queue_consumed_at" type="timestamp"/>
-            <column name="inbound_queue_processing_started_at" type="timestamp"/>
-            <column name="inbound_queue_processed_at" type="timestamp"/>
-
-            <column name="execution_queue_published_at" type="timestamp"/>
-            <column name="execution_queue_consumed_at" type="timestamp"/>
-            <column name="execution_queue_processing_started_at" type="timestamp"/>
-            <column name="execution_queue_processed_at" type="timestamp"/>
-
-            <column name="outbound_queue_published_at" type="timestamp"/>
-            <column name="outbound_queue_consumed_at" type="timestamp"/>
-            <column name="outbound_queue_processing_started_at" type="timestamp"/>
-            <column name="outbound_queue_processed_at" type="timestamp"/>
-
             <column name="created_at"
                     type="timestamp"
                     defaultValueComputed="CURRENT_TIMESTAMP"/>

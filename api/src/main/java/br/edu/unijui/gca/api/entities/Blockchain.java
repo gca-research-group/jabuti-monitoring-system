@@ -21,7 +21,6 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 @Table(name="blockchains")
 public class Blockchain {
-
     @Id
     @GeneratedValue
     @UuidGenerator

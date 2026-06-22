@@ -27,22 +27,22 @@ import java.util.stream.Collectors;
 @Component
 public class SmartContractQueueInboundService {
     @Autowired
+    private SmartContractService smartContractService;
+
+    @Autowired
+    private SmartContractExecutionService smartContractExecutionService;
+
+    @Autowired
+    private SmartContractExecutionEventService smartContractExecutionEventService;
+
+    @Autowired
     private BlockchainService blockchainService;
 
     @Autowired
     private BlockchainMapper blockchainMapper;
 
     @Autowired
-    private SmartContractService smartContractService;
-
-    @Autowired
     private SmartContractMapper smartContractMapper;
-
-    @Autowired
-    private SmartContractExecutionService smartContractExecutionService;
-
-    @Autowired
-    private AmqpTemplate amqpTemplate;
 
     @Autowired
     private SmartContractExecutionMapper smartContractExecutionMapper;
@@ -50,23 +50,17 @@ public class SmartContractQueueInboundService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private AmqpTemplate amqpTemplate;
+
     @RabbitListener(queues = {QueueNames.INBOUND_QUEUE})
     public void process(SmartContractQueueInboundEventDto event) {
         Instant consumedAt = Instant.now();
-        /*SmartContractExecutionDto smartContractExecutionDto = SmartContractExecutionDto.builder()
-                .status("PENDING")
-                .metadata(Map.of("event", event))
-                .inboundQueueConsumedAt(consumedAt)
-                .inboundQueueProcessingStartedAt(Instant.now())
-                .build();
-        SmartContractExecution smartContractExecution = smartContractExecutionService.create(smartContractExecutionDto);
-                */
 
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
 
-        smartContractExecution.setInboundQueueConsumedAt(consumedAt);
-        smartContractExecution.setInboundQueueProcessingStartedAt(Instant.now());
-        smartContractExecutionService.update(smartContractExecution);
+        smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.consumed", consumedAt);
+        smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.processing", Instant.now());
 
         try {
             Blockchain blockchain;
@@ -117,9 +111,9 @@ public class SmartContractQueueInboundService {
 
             smartContractExecution.setStatus("QUEUED");
             smartContractExecution.setPayload(payload);
-            smartContractExecution.setInboundQueueProcessedAt(Instant.now());
-
             smartContractExecutionService.update(smartContractExecution);
+
+            smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.processed", Instant.now());
 
             amqpTemplate.convertAndSend(
                     QueueNames.MAIN_EXCHANGE,
@@ -127,8 +121,8 @@ public class SmartContractQueueInboundService {
                     payload
             );
 
-            smartContractExecution.setExecutionQueuePublishedAt(Instant.now());
-            smartContractExecutionService.update(smartContractExecution);
+            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.published", Instant.now());
+
         } catch (Exception ex) {
             smartContractExecution.setStatus("ERROR");
             smartContractExecution.setResult(
@@ -136,11 +130,10 @@ public class SmartContractQueueInboundService {
                             Map.of("error", ex.getMessage())
                     )
             );
-
-            smartContractExecution.setInboundQueueProcessedAt(Instant.now());
-            smartContractExecution.setOutboundQueuePublishedAt(Instant.now());
-
             smartContractExecutionService.update(smartContractExecution);
+
+            smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.processed", Instant.now());
+            smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.published", Instant.now());
 
             amqpTemplate.convertAndSend(
                     QueueNames.MAIN_EXCHANGE,

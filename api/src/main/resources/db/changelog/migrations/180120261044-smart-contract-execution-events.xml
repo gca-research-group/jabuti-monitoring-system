@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="180120261044" author="Mailson Teles Borges">
+
+        <createTable tableName="smart_contract_execution_events">
+
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints
+                        primaryKey="true"
+                        primaryKeyName="pk__smart_contract_execution_events__id"/>
+            </column>
+
+
+            <column name="smart_contract_execution_id"
+                    type="uuid">
+                <constraints nullable="false"/>
+            </column>
+
+
+            <column name="name"
+                    type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="event_at"
+                    type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="created_at"
+                    type="timestamp"
+                    defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="smart_contract_execution_events"
+                baseColumnNames="smart_contract_execution_id"
+                constraintName="fk__scee__execution_id__sce__id"
+                referencedTableName="smart_contract_executions"
+                referencedColumnNames="id"
+                onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

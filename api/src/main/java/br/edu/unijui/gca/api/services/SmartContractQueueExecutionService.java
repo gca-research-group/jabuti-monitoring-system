@@ -1,6 +1,7 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
+import br.edu.unijui.gca.api.dtos.SmartContractExecutionEventDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
@@ -26,6 +27,9 @@ public class SmartContractQueueExecutionService {
     private SmartContractExecutionService smartContractExecutionService;
 
     @Autowired
+    private SmartContractExecutionEventService smartContractExecutionEventService;
+
+    @Autowired
     private SmartContractExecutionMapper smartContractExecutionMapper;
 
     @Autowired
@@ -40,8 +44,9 @@ public class SmartContractQueueExecutionService {
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(payload.getId());
 
         try {
-            smartContractExecution.setExecutionQueueConsumedAt(consumedAt);
-            smartContractExecution.setExecutionQueueProcessingStartedAt(Instant.now());
+            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.consumed", consumedAt);
+            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.processing", Instant.now());
+
             smartContractExecution.setStatus("PROCESSING");
             smartContractExecutionService.update(smartContractExecution);
 
@@ -60,7 +65,8 @@ public class SmartContractQueueExecutionService {
 
             smartContractExecution.setStatus("SUCCESS");
             smartContractExecution.setResult(result);
-            smartContractExecution.setExecutionQueueProcessedAt(Instant.now());
+
+            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.processed", Instant.now());
 
             smartContractExecutionService.update(smartContractExecution);
 
@@ -69,8 +75,7 @@ public class SmartContractQueueExecutionService {
                 QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
 
-            smartContractExecution.setOutboundQueuePublishedAt(Instant.now());
-            smartContractExecutionService.update(smartContractExecution);
+            smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.published", Instant.now());
 
         } catch(Throwable t) {
             smartContractExecution.setStatus("ERROR");
@@ -80,6 +85,8 @@ public class SmartContractQueueExecutionService {
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
+
+            smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.published", Instant.now());
 
             throw new AmqpRejectAndDontRequeueException(t);
         }

@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -23,40 +22,4 @@ public class SmartContractExecutionDto extends BaseDto<UUID> {
     private Map<String, Object> metadata;
     private String result;
     private String status;
-
-    /*
-     * Inbound queue tracking
-     */
-
-    private Instant inboundQueuePublishedAt;
-
-    private Instant inboundQueueConsumedAt;
-
-    private Instant inboundQueueProcessingStartedAt;
-
-    private Instant inboundQueueProcessedAt;
-
-    /*
-     * Execution queue tracking
-     */
-
-    private Instant executionQueuePublishedAt;
-
-    private Instant executionQueueConsumedAt;
-
-    private Instant executionQueueProcessingStartedAt;
-
-    private Instant executionQueueProcessedAt;
-
-    /*
-     * Outbound queue tracking
-     */
-
-    private Instant outboundQueuePublishedAt;
-
-    private Instant outboundQueueConsumedAt;
-
-    private Instant outboundQueueProcessingStartedAt;
-
-    private Instant outboundQueueProcessedAt;
 }
