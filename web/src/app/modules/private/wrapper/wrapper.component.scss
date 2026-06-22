@@ -1,0 +1,6 @@
+.content-container {
+  width: calc(100% - 32px);
+  height: calc(100vh - var(--jms-toolbar-height));
+  padding: 16px;
+  overflow-y: auto;
+}

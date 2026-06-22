@@ -1,2 +1,7 @@
 <app-toolbar />
-<app-sidebar [items]="menus"><router-outlet /> </app-sidebar>
+<div class="d-flex">
+  <app-sidebar [items]="menus" />
+  <div class="content-container">
+    <router-outlet />
+  </div>
+</div>

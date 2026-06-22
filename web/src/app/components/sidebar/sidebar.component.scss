@@ -1,30 +1,9 @@
-.sidenav-container {
-  height: calc(100vh - var(--scems-toolbar-height));
+nav {
+  position: relative;
 }
 
-mat-sidenav {
+nav ul {
   padding-top: 8px;
-  width: var(--scems-sidebar-expanded-width);
-  transition: width 0.3s ease;
-  background-color: var(--scems-sidebar-background-color);
-  color: white;
-}
-
-.sidenav-container app-icon {
-  min-width: var(--scems-sidebar-collapsed-width);
-}
-
-mat-sidenav.collapsed {
-  width: var(--scems-sidebar-collapsed-width);
-}
-
-mat-sidenav-content {
-  padding: var(--scems-content-vertical-padding) var(--scems-content-horizontal-padding);
-}
-
-.mat-drawer,
-.mat-drawer-side {
-  border-radius: 0;
 }
 
 ul {
@@ -34,25 +13,101 @@ ul {
 }
 
 li {
-  display: flex;
-  align-items: center;
-  padding: 6px 0;
   cursor: pointer;
   color: inherit;
 }
 
-li.active {
-  background-color: gray;
+.sidebar-item {
+  padding: 4px 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
 }
 
-.menu-text {
-  transition: opacity 0.3s ease;
+.sidebar-label {
+  font-size: 14px;
 }
 
-mat-sidenav.collapsed .menu-text {
-  display: none;
+.sidebar-icon {
+  display: inline-flex;
+  min-width: var(--jms-sidebar-collapsed-width);
 }
 
-:host ::ng-deep .mat-drawer-inner-container {
-  overflow: hidden;
+.sidebar-children {
+  margin-left: 50px;
+  margin-bottom: 8px;
+}
+
+.sidebar-children-child {
+  padding: 4px;
+  margin-right: 8px;
+  border-radius: 4px;
+}
+
+.sidebar {
+  height: 100%;
+  min-height: calc(100vh - var(--jms-toolbar-height));
+  border-right: 1px solid var(--jms-border-color);
+  background-color: var(--jms-sidebar-background-color);
+}
+
+.sidebar.closed {
+  width: 50px;
+}
+
+.active {
+  background-color: var(--jms-sidebar-hover-color) !important;
+}
+
+.sidebar.opened {
+  width: 250px;
+}
+
+button {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0;
+}
+
+button.sidebar-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+[icon='expand_more'] {
+  margin: 0 8px;
+}
+
+.rotate {
+  transform: rotate(180deg);
+  transition: transform 0.3s ease;
+}
+
+.sidebar a,
+.sidebar button {
+  color: #212529;
+  background: none;
+  border: none;
+  text-align: left;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sidebar a:hover,
+.sidebar button:hover {
+  background-color: var(--jms-sidebar-hover-color);
+}
+
+pin {
+  transform: rotate(0deg);
+  position: absolute; right: 4px; top: 4px;
+}
+
+.pin-rotate {
+  transform: rotate(45deg);
 }

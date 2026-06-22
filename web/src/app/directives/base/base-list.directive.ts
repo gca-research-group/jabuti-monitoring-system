@@ -109,7 +109,7 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
   private updateTableSize() {
     const form = this.formElement?.nativeElement;
 
-    this.tableHeight = `calc(100vh - var(--scems-toolbar-height) - (2 * var(--scems-content-vertical-padding)) - ${form?.offsetHeight}px - 16px)`;
+    this.tableHeight = `calc(100vh - var(--jms-toolbar-height) - (2 * var(--jms-content-vertical-padding)) - ${form?.offsetHeight}px - 16px)`;
   }
 
   abstract getCurrentItemId(item: T): string | number | null | undefined;

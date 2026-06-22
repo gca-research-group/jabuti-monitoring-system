@@ -3,6 +3,7 @@ export * from './breadcrumb.model';
 export * from './column.model';
 export * from './crud.model';
 export * from './login.model';
+export * from './preferences.model'
 export * from './response.model';
 export * from './selector.model';
 export * from './sidebar.model';

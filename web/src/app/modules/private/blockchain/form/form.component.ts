@@ -18,7 +18,6 @@ import { BaseFormDirective } from '@app/directives/base';
 import { Blockchain } from '@app/models';
 import { BlockchainService } from '@app/services/blockchain';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
-import { JsonPipe } from '@angular/common';
 
 @Component({
   selector: 'app-blockchain-form',
@@ -28,8 +27,6 @@ import { JsonPipe } from '@angular/common';
   imports: [
     ReactiveFormsModule,
     FormsModule,
-    JsonPipe,
-
     TranslateModule,
 
     InputComponent,

@@ -60,14 +60,21 @@
             style="display: flex; align-items: center; gap: 8px"
             [style.justifyContent]="isMobile ? 'left' : 'right'"
           >
-            @if (isLoading()){
+            @if (isLoading()) {
               <mat-spinner [diameter]="20" />
             }
 
-            {{
-              'diplaying-itens'
-                | translate: { current: dataSource().length, total: total() }
-            }}
+            @if ( dataSource().length && total() > 0) {
+              {{
+                'diplaying-itens'
+                  | translate: { current: dataSource().length, total: total() }
+              }}
+            } @else if ( dataSource().length) {
+              {{
+                'diplaying-itens'
+                  | translate: { current: dataSource().length }
+              }}
+            }
           </small>
         }
       </th>

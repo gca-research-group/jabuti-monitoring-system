@@ -8,12 +8,13 @@ import {
   signal,
   effect,
   OnInit,
+  computed,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatToolbar } from '@angular/material/toolbar';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { Breadcrumb } from '@app/models';
 import { BreadcrumbService } from '@app/services/breadcrumb';
@@ -31,6 +32,8 @@ import { LanguageSelectorComponent } from '../language-selector/language-selecto
   templateUrl: './toolbar.component.html',
   styleUrl: './toolbar.component.scss',
   imports: [
+    RouterLink,
+
     TranslateModule,
 
     MatButtonModule,
@@ -52,6 +55,8 @@ export class ToolbarComponent implements OnInit, OnDestroy {
   private router = inject(Router);
 
   currentUser = this.currentUserService.currentUser$;
+
+  currentUserName = computed(() => this.currentUser()?.name);
 
   isCollapsed = true;
   language = signal(this.languageService.language);

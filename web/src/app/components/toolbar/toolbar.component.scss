@@ -1,11 +1,11 @@
 mat-toolbar {
   padding: 0;
-  height: var(--scems-toolbar-height);
-  border-bottom: 1px solid var(--scems-sidebar-background-color);
+  height: var(--jms-toolbar-height);
+  border-bottom: 1px solid var(--jms-border-color);
 }
 
 app-icon-button {
-  width: var(--scems-sidebar-collapsed-width);
+  width: var(--jms-sidebar-collapsed-width);
 }
 
 .toolbar-container {

@@ -35,6 +35,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { requestInterceptor } from './interceptors';
 import { UserState } from './state/current-user';
+import { PreferencesState } from './state/preferences';
 
 echarts.use([
   LineChart,
@@ -58,7 +59,7 @@ const httpLoaderFactory: (http: HttpClient) => TranslateHttpLoader = (
 export const appConfig: ApplicationConfig = {
   providers: [
     provideStore(
-      [UserState],
+      [UserState, PreferencesState],
       withNgxsStoragePlugin({
         keys: '*',
       }),

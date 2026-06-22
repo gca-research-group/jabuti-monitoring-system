@@ -14,6 +14,10 @@ export class SidebarService {
     this.isCollapsed.next(!this.isCollapsed.value);
   }
 
+  open() {
+    this.isCollapsed.next(false);
+  }
+
   collapse() {
     this.isCollapsed.next(true);
   }

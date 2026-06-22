@@ -49,7 +49,7 @@ export class TableComponent<T> implements OnDestroy {
 
   onDestroy$ = new Subject();
 
-  total = input();
+  total = input<number>(0);
 
   isMobile = inject(IS_MOBILE);
 

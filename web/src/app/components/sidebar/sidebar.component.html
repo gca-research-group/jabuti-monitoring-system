@@ -1,32 +1,77 @@
-<mat-sidenav-container
-  class="sidenav-container"
-  [autosize]="autosize"
-  [hasBackdrop]="false"
->
-  <mat-sidenav
-    #sidenav
-    [mode]="mode"
-    [opened]="opened"
-    [class.collapsed]="isCollapsed"
-  >
-    <ul>
-      @for (item of items(); track item.icon) {
-        <li
-          tabindex="0"
-          [class.active]="currentIndex === $index"
-          (click)="currentIndex = $index"
-          [routerLink]="item.url"
-        >
-          <app-icon
-            [icon]="item.icon"
-            [tooltip]="isCollapsed ? (item.label | translate) : ''"
-          />
-          <span class="menu-text" *ngIf="!isCollapsed">{{
-            item.label | translate
-          }}</span>
-        </li>
-      }
-    </ul>
-  </mat-sidenav>
-  <mat-sidenav-content><ng-content /></mat-sidenav-content>
-</mat-sidenav-container>
+<nav class="sidebar" [ngClass]="{ opened: !isCollapsed, closed: isCollapsed }">
+  @if (!isCollapsed) {
+    <app-icon-button
+      icon="keep"
+      style="position: absolute; right: 4px; top: 4px"
+      [class]="{ 'pin-rotate': !isMenuFixed() }"
+      (click)="toggleIsFixed()"
+    />
+  }
+
+  <ul>
+    @for (item of items(); track $index) {
+      <li [tabindex]="$index">
+        @if (!item.children) {
+          <div
+            class="sidebar-item"
+            (click)="setCurrentIndexAndCurrentUrl(item, $index); navigate(item)"
+            [class.active]="currentUrl === item.url"
+          >
+            <app-icon
+              [icon]="item.icon"
+              [tooltip]="isCollapsed ? (item.label | translate) : ''"
+              class="sidebar-icon"
+            />
+            @if (!isCollapsed) {
+              <span class="sidebar-label">{{ item.label | translate }}</span>
+            }
+          </div>
+        }
+
+        @if (item?.children) {
+          <button
+            class="sidebar-item d-flex"
+            (click)="open($index)"
+            [class.active]="currentIndex === $index"
+          >
+            <div class="d-flex align-items-center">
+              <app-icon
+                [icon]="item.icon"
+                [tooltip]="isCollapsed ? (item.label | translate) : ''"
+                class="sidebar-icon"
+              />
+              @if (!isCollapsed) {
+                <span class="sidebar-label">{{ item.label | translate }}</span>
+              }
+            </div>
+
+            @if (!isCollapsed) {
+              <app-icon
+                icon="expand_more"
+                [ngClass]="{ rotate: currentIndex === $index && opened }"
+              />
+            }
+          </button>
+
+          @if (currentIndex === $index && opened) {
+            <ul class="sidebar-children">
+              @for (child of item.children; track $index) {
+                <li (click)="currentUrl = child.url!">
+                  <div
+                    class="sidebar-children-child"
+                    [class.active]="currentUrl === child.url"
+                    (click)="navigate(child)"
+                  >
+                    <span class="sidebar-label">{{
+                      child.label | translate
+                    }}</span>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        }
+      </li>
+    }
+  </ul>
+</nav>

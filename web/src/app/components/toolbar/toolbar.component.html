@@ -32,10 +32,7 @@
       }
 
       <mat-menu #menu="matMenu">
-        <div mat-menu-item>
-          <div>{{ currentUser()?.name }}</div>
-          <div>{{ currentUser()?.email }}</div>
-        </div>
+        <a mat-menu-item routerLink="/admin/profile">{{ currentUserName() }}</a>
         <button mat-menu-item class="toolbar-right-menu" (click)="logout()">
           <app-icon icon="logout" />
           <span>{{ 'logout' | translate }}</span>

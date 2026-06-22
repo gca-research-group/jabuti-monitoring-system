@@ -1,17 +1,28 @@
 /* You can add global styles to this file, and also import other style files */
 
-@use "@ng-select/ng-select/themes/material.theme.css";
+@use '@ng-select/ng-select/themes/material.theme.css';
+@use 'bootstrap/dist/css/bootstrap-grid.min.css' as *;
+@use 'bootstrap/dist/css/bootstrap-utilities.min.css' as *;
 
-@use "bootstrap/dist/css/bootstrap-grid.min.css" as *;
-@use "bootstrap/dist/css/bootstrap-utilities.min.css" as *;
+// TODO: it is not possible to import variables using "use"
+@use 'bootstrap/scss/functions' as *;
+// @import 'bootstrap/scss/variables';
+@use 'bootstrap/scss/mixins' as *;
 
-@use 'ngx-toastr/toastr';
-@import  'bootstrap/scss/_functions';
-@import  'bootstrap/scss/variables';
-@import  'bootstrap/scss/mixins';
-@import 'ngx-toastr/toastr-bs5-alert';
+@use 'ngx-toastr/toastr' as *;
 
-@import url('https://fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700&subset=latin,latin-ext&display=fallback');
+// TODO: Bootstrap customization is not working
+// @import 'ngx-toastr/toastr-bs5-alert';
+
+@import url('https://fonts.googleapis.com/css?family=Open+Sans:400italic,700italic,400,700&subset=latin,latin-ext&display=swap');
+
+html {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 html,
 body {
@@ -20,7 +31,7 @@ body {
 
 body {
   margin: 0;
-  font-family: "Open Sans", Helvetica, Arial, sans-serif;
+  font-family: 'Open Sans', Helvetica, Arial, sans-serif;
 }
 
 * {
@@ -43,15 +54,29 @@ a {
   border-radius: 10px;
 }
 
-
 :root {
-  --scems-sidebar-collapsed-width: 50px;
-  --scems-sidebar-expanded-width: 250px;
-  --scems-sidebar-background-color: #333;
-  --scems-toolbar-height: 40px;
-  --scems-menu-icon-height: 40px;
-  --scems-content-horizontal-padding: 8px;
-  --scems-content-vertical-padding: 16px;
+  --jms-sidebar-collapsed-width: 50px;
+  --jms-sidebar-background-color: #f8f9fa;
+  --jms-background-color: #f8f9fa;
+  --jms-sidebar-hover-color: #e9ecef;
+  --jms-toolbar-height: 40px;
+  --jms-menu-icon-height: 40px;
+  --jms-content-horizontal-padding: 8px;
+  --jms-content-vertical-padding: 16px;
+  --jms-public-wrapper-width: 1024px;
+  --jms-public-header-height: 136px;
+  --jms-public-footer-height: 48px;
+  --jms-public-wrapper-horizontal-padding: 16px;
+  --jms-border-color: #ddd;
+  --jms-public-border-color: #ededed;
+  --jms-public-light-text-color: #5e5e5e;
+  --jms-public-dark-text-color: #454545;
+  --jms-public-section-bg-color: #f5f5f5;
+  --jms-public-btn-bg-color: #003366;
+  --jms-public-btn-text-color: #fff;
+  --jms-public-width-mobile-landscape: 768px;
+  --jms-public-width-mobile-portrait: 480px;
+  --jms-public-background-color: #ffffff;
 }
 
 .ng-select {
@@ -63,10 +88,65 @@ a {
 }
 
 ::ng-deep .ng-placeholder {
-  color: var(--mat-form-field-outlined-hover-label-text-color, var(--mat-sys-on-surface));
+  color: var(
+    --mdc-outlined-text-field-hover-label-text-color,
+    var(--mat-sys-on-surface)
+  );
   font-size: var(--mat-form-field-outlined-label-text-populated-size);
-  font-family: var(--mat-form-field-outlined-label-text-font, var(--mat-sys-body-large-font));
-  font-weight: var(--mat-form-field-outlined-label-text-weight, var(--mat-sys-body-large-weight));
-  letter-spacing: var(--mat-form-field-outlined-label-text-tracking, var(--mat-sys-body-large-tracking));
-  background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
+  font-family: var(
+    --mdc-outlined-text-field-label-text-font,
+    var(--mat-sys-body-large-font)
+  );
+  font-weight: var(
+    --mdc-outlined-text-field-label-text-weight,
+    var(--mat-sys-body-large-weight)
+  );
+  letter-spacing: var(
+    --mdc-outlined-text-field-label-text-tracking,
+    var(--mat-sys-body-large-tracking)
+  );
+  background-color: var(
+    --mat-sidenav-content-background-color,
+    var(--mat-sys-background)
+  );
 }
+
+/* painel - menu hambuguer */
+.hamburger-menu-panel {
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  padding: 4px 0;
+
+  .mat-mdc-menu-item {
+    color: #000000;
+  }
+
+  .mat-mdc-menu-content {
+    background-color: transparent;
+  }
+
+  /* itens */
+  .mat-mdc-menu-item {
+    color: #000000;
+    font-weight: 500;
+    a {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      width: 100%;
+    }
+  }
+
+  /* hover */
+  .mat-mdc-menu-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  /* ativo */
+  .mat-mdc-menu-item.active {
+    background-color: #1976d2;
+    color: #ffffff;
+  }
+}
+
