@@ -1,7 +1,6 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
-import br.edu.unijui.gca.api.dtos.SmartContractExecutionEventDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
@@ -14,7 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 
 @Slf4j
@@ -27,9 +27,6 @@ public class SmartContractQueueExecutionService {
     private SmartContractExecutionService smartContractExecutionService;
 
     @Autowired
-    private SmartContractExecutionEventService smartContractExecutionEventService;
-
-    @Autowired
     private SmartContractExecutionMapper smartContractExecutionMapper;
 
     @Autowired
@@ -40,13 +37,16 @@ public class SmartContractQueueExecutionService {
 
     @RabbitListener(queues = {QueueNames.EXECUTION_QUEUE})
     public void process(SmartContractPayloadDto payload) {
-        Instant consumedAt = Instant.now();
+        OffsetDateTime consumedAt = OffsetDateTime.now(ZoneOffset.UTC);
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(payload.getId());
 
-        try {
-            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.consumed", consumedAt);
-            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.processing", Instant.now());
+        Map<String, String> timestamps = smartContractExecution.getTimestamps();
 
+        try {
+            timestamps.put("execution_queue.consumed", consumedAt.toString());
+            timestamps.put("execution_queue.processing", OffsetDateTime.now(ZoneOffset.UTC).toString());
+
+            smartContractExecution.setTimestamps(timestamps);
             smartContractExecution.setStatus("PROCESSING");
             smartContractExecutionService.update(smartContractExecution);
 
@@ -66,7 +66,10 @@ public class SmartContractQueueExecutionService {
             smartContractExecution.setStatus("SUCCESS");
             smartContractExecution.setResult(result);
 
-            smartContractExecutionEventService.create(smartContractExecution, "execution_queue.processed", Instant.now());
+            timestamps.put("execution_queue.processed", OffsetDateTime.now(ZoneOffset.UTC).toString());
+            timestamps.put("outbound_queue.published", OffsetDateTime.now(ZoneOffset.UTC).toString());
+
+            smartContractExecution.setTimestamps(timestamps);
 
             smartContractExecutionService.update(smartContractExecution);
 
@@ -74,19 +77,17 @@ public class SmartContractQueueExecutionService {
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
-
-            smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.published", Instant.now());
-
         } catch(Throwable t) {
             smartContractExecution.setStatus("ERROR");
             smartContractExecution.setResult(objectMapper.writeValueAsString(Map.of("error", t.getMessage())));
+            timestamps.put("outbound_queue.published", OffsetDateTime.now(ZoneOffset.UTC).toString());
+            smartContractExecution.setTimestamps(timestamps);
+            smartContractExecutionService.update(smartContractExecution);
 
             amqpTemplate.convertAndSend(
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
-
-            smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.published", Instant.now());
 
             throw new AmqpRejectAndDontRequeueException(t);
         }

@@ -15,11 +15,9 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SmartContractExecutionDto extends BaseDto<UUID> {
-    private String executionId;
-    private String groupId;
-
     private SmartContractPayloadDto payload;
     private Map<String, Object> metadata;
+    private Map<String, String> timestamps;
     private String result;
     private String status;
 }

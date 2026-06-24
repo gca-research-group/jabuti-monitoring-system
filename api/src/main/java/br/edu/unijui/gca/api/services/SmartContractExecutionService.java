@@ -2,7 +2,6 @@ package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionDto;
-import br.edu.unijui.gca.api.dtos.SmartContractExecutionEventDto;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
@@ -13,8 +12,9 @@ import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.Map;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.UUID;
 
 @Service
@@ -28,28 +28,25 @@ public class SmartContractExecutionService extends BaseService<
         SmartContractExecutionMapper> {
 
     @Autowired
-    private SmartContractExecutionEventService smartContractExecutionEventService;
-
-    @Autowired
     private AmqpTemplate amqpTemplate;
 
     public void removeAll() {
-        repository.deleteAll();
+        repository.deleteAllInBatch();
     }
 
     public void execute(SmartContractQueueInboundEventDto event) {
+        var timestamps = new HashMap<String, String>();
+        timestamps.put("inbound_queue.published", OffsetDateTime.now(ZoneOffset.UTC).toString());
+
         SmartContractExecutionDto smartContractExecutionDto = SmartContractExecutionDto.builder()
                 .status("PENDING")
-                .metadata(Map.of("event", event))
-                .executionId(event.getExecutionId())
-                .groupId(event.getGroupId())
+                .metadata(event.getMetadata())
+                .timestamps(timestamps)
                 .build();
 
         SmartContractExecution smartContractExecution = create(smartContractExecutionDto);
 
         event.setId(smartContractExecution.getId());
-
-        smartContractExecutionEventService.create(smartContractExecution, "inbound_queue.published", Instant.now());
 
         amqpTemplate.convertAndSend(
                 QueueNames.MAIN_EXCHANGE,

@@ -2,20 +2,19 @@ package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractExecutionDto;
-import br.edu.unijui.gca.api.dtos.SmartContractExecutionEventDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Map;
 
 @Slf4j
 @Component
 public class SmartContractQueueOutboundService {
-    @Autowired
-    private SmartContractExecutionEventService smartContractExecutionEventService;
 
     @Autowired
     private SmartContractExecutionService smartContractExecutionService;
@@ -24,11 +23,13 @@ public class SmartContractQueueOutboundService {
     public void process(SmartContractExecutionDto event) {
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
 
-        smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.consumed", Instant.now());
-        smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.processing", Instant.now());
+        Map<String, String> timestamps = smartContractExecution.getTimestamps();
 
-        smartContractExecutionService.update(event.getId(), event);
+        timestamps.put("outbound_queue.consumed", OffsetDateTime.now(ZoneOffset.UTC).toString());
+        timestamps.put("outbound_queue.processing", OffsetDateTime.now(ZoneOffset.UTC).toString());
+        timestamps.put("outbound_queue.processed", OffsetDateTime.now(ZoneOffset.UTC).toString());
 
-        smartContractExecutionEventService.create(smartContractExecution, "outbound_queue.processed", Instant.now());
+        smartContractExecution.setTimestamps(timestamps);
+        smartContractExecutionService.update(smartContractExecution);
     }
 }

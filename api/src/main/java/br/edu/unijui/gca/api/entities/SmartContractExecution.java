@@ -27,12 +27,6 @@ public class SmartContractExecution {
     @Column
     private UUID id;
 
-    @Column
-    private String executionId;
-
-    @Column
-    private String groupId;
-
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private SmartContractPayloadDto payload;
@@ -43,6 +37,10 @@ public class SmartContractExecution {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> metadata;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private Map<String, String> timestamps;
 
     @Column(nullable = false)
     private String status;
