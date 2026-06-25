@@ -83,13 +83,13 @@ public class AuthFilter extends OncePerRequestFilter {
 
     private void authenticateBearer(
             HttpServletRequest request,
-            BearerToken token
+            BearerToken bearerToken
     ) {
-        String email = jwtService.getSubject(token.toString());
+        String email = jwtService.getSubject(bearerToken.token());
 
         User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
-        if (!jwtService.isTokenValid(token.toString(), user)) {
+        if (!jwtService.isTokenValid(bearerToken.token(), user)) {
             throw new InvalidTokenException();
         }
 
