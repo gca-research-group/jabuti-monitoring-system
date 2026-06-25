@@ -13,11 +13,10 @@
                         primaryKeyName="pk__smart_contract_executions__id"/>
             </column>
 
-            <column name="execution_id" type="varchar(255)" />
-            <column name="group_id" type="varchar(255)" />
             <column name="payload" type="jsonb"/>
             <column name="result" type="text"/>
             <column name="metadata" type="jsonb"/>
+            <column name="timestamps" type="jsonb"/>
 
             <column name="status" type="varchar(255)" defaultValue="PENDING">
                 <constraints nullable="false"/>

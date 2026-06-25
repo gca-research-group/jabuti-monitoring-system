@@ -3,16 +3,18 @@ package br.edu.unijui.gca.api.services;
 import br.edu.unijui.gca.api.dtos.AuthResponseDto;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.ExpiredTokenException;
-import br.edu.unijui.gca.api.exceptions.InvalidPasswordException;
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
+import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
 import br.edu.unijui.gca.api.exceptions.UserNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService {
+    @Autowired
+    private PasswordService passwordService;
+
     @Autowired
     private UserService userService;
 
@@ -22,21 +24,10 @@ public class AuthService {
     @Autowired
     private RefreshTokenService refreshTokenService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
     public AuthResponseDto authenticate(String email, String password, HttpServletResponse response) {
-        User user = userService.findByEmail(email);
+        User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
-        if (user == null) {
-            throw new UserNotFoundException();
-        }
-
-        boolean isValid = passwordEncoder.matches(password, user.getPassword());
-
-        if (!isValid) {
-            throw new InvalidPasswordException();
-        }
+        passwordService.validatePassword(password, user.getPassword());
 
         refreshTokenService.setRefreshToken(response, user);
 
@@ -53,7 +44,7 @@ public class AuthService {
     public AuthResponseDto refresh(HttpServletResponse response, String token) {
         try {
             String email = jwtService.getSubject(token);
-            User user = userService.findByEmail(email);
+            User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
             if(!jwtService.isTokenValid(token, user)) {
                 throw new InvalidTokenException();

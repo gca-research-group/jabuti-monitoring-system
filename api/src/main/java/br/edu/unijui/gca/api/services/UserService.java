@@ -8,6 +8,8 @@ import br.edu.unijui.gca.api.repositories.UserRepository;
 import br.edu.unijui.gca.api.specifications.UserSpecification;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class UserService  extends BaseService<
         User,
@@ -18,7 +20,7 @@ public class UserService  extends BaseService<
         UserSpecification,
         UserMapper> {
 
-    public User findByEmail(String email) {
+    public Optional<User> findByEmail(String email) {
         return repository.findByEmail(email);
     }
 }
