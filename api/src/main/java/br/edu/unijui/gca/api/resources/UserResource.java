@@ -1,7 +1,7 @@
 package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.dtos.UserDto;
-import br.edu.unijui.gca.api.dtos.UserFilterDto;
+import br.edu.unijui.gca.api.dtos.filter.UserFilterDto;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.services.UserService;
 import org.springframework.web.bind.annotation.RequestMapping;

@@ -2,7 +2,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { interval, Subscription, tap } from 'rxjs';
 
 import { NgStyle } from '@angular/common';
-import { Component, OnDestroy, TemplateRef, viewChild } from '@angular/core';
+import { Component, inject, OnDestroy, TemplateRef, viewChild } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 
@@ -14,10 +14,11 @@ import { SmartContractExecutionResultDialogComponent } from '@app/components/sma
 import { SmartContractExecutionStatusSelectorComponent } from '@app/components/smart-contract-execution-status-selector';
 import { TableComponent } from '@app/components/table';
 import { BaseListDirective } from '@app/directives/base';
-import { Column, ColumnType, SmartContractExecution } from '@app/models';
+import { Column, ColumnType, CrudService, SmartContractExecution } from '@app/models';
 import { StatusColorPipe } from '@app/pipes';
 import { SmartContractExecutionService } from '@app/services/smart-contract-execution';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
+import { ExpansionPanelComponent } from '@app/components/expansion-panel';
 
 const COLUMNS: Column[] = [
   {
@@ -69,6 +70,7 @@ const COLUMNS: Column[] = [
     TranslateModule,
 
     BlockchainPlatformSelectorComponent,
+    ExpansionPanelComponent,
     IconButtonComponent,
     InputComponent,
     SmartContractExecutionStatusSelectorComponent,
@@ -97,11 +99,12 @@ const COLUMNS: Column[] = [
 })
 export class ListComponent
   extends BaseListDirective<
-    SmartContractExecution,
-    SmartContractExecutionService
+    SmartContractExecution
   >
   implements OnDestroy
 {
+  protected override service = inject(SmartContractExecutionService);
+
   columns = COLUMNS;
 
   displayedColumns = COLUMNS.map(column => column.id);
@@ -168,19 +171,6 @@ export class ListComponent
     });
   }
 
-  override getCurrentItemId(
-    item: SmartContractExecution,
-  ): string | number | null | undefined {
-    return item.id;
-  }
-
-  updateRouteQueryParameters() {
-    void this.router.navigate([], {
-      queryParams: this.form.value as Record<string, string>,
-      queryParamsHandling: 'merge',
-    });
-  }
-
   openSmartContractExecutionDialog(data: SmartContractExecution): void {
     const _data = JSON.parse(JSON.stringify(data)) as SmartContractExecution;
 
@@ -192,7 +182,8 @@ export class ListComponent
 
     this.dialog.open(SmartContractExecutionResultDialogComponent, {
       data: _data,
-      width: '60%',
+      width: '80vw',
+      maxWidth: '80vw'
     });
   }
 

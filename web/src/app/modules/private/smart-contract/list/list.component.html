@@ -1,11 +1,13 @@
-<form [formGroup]="form" class="mb-3 d-flex" style="gap: 8px" #filters>
-  <app-input formControlName="id" label="id" class="col" />
-  <app-input formControlName="name" label="name" class="col" />
-  <app-blockchain-platform-selector
-    formControlName="blockchainPlatform"
-    class="col"
-  />
-</form>
+<app-expansion-panel title="filters" #filters>
+  <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
+    <app-input formControlName="id" label="id" class="col" />
+    <app-input formControlName="name" label="name" class="col" />
+    <app-blockchain-platform-selector
+      formControlName="blockchainPlatform"
+      class="col"
+    />
+  </form>
+</app-expansion-panel>
 
 <app-table
   [height]="tableHeight"

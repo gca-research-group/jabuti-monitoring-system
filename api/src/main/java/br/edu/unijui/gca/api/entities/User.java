@@ -1,5 +1,6 @@
 package br.edu.unijui.gca.api.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -31,6 +32,7 @@ public class User {
     @Column
     String photo;
 
+    @JsonIgnore
     @Column
     String password;
 

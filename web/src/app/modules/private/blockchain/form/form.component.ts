@@ -89,8 +89,6 @@ export class FormComponent extends BaseFormDirective<
     });
   }
 
-  protected override updateFormOnUpdateInitialization(): void {}
-
   private updateParameters() {
     this.form
       .get('platform')

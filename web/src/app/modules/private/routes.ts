@@ -6,6 +6,7 @@ import { blockchainRoutes } from './blockchain';
 import { smartContractRoutes } from './smart-contract';
 import { SmartContractExecutionRoutes } from './smart-contract-execution';
 import { WrapperComponent } from './wrapper';
+import { userRoutes } from './user';
 
 export const privateRoutes: Routes = [
   {
@@ -15,7 +16,8 @@ export const privateRoutes: Routes = [
       ...blockchainRoutes,
       ...SmartContractExecutionRoutes,
       ...smartContractRoutes,
+      ...userRoutes,
     ],
-    canActivate: [isAuthenticatedGuard],
+    canActivateChild: [isAuthenticatedGuard],
   },
 ];

@@ -1,0 +1,32 @@
+<label
+  class="dropzone"
+  [style.width]="width()"
+  [style.height]="height()"
+  [style.minHeight]="minHeight()"
+  [style.borderRadius]="borderRadius()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  [attr.for]="inputId"
+>
+  @if (file) {
+    <img [src]="file" width="auto" height="100%" style="max-width: 100%;" />
+  }
+
+  @if (description() && !file) {
+    <p class="description">{{ description() ?? '' | translate }}</p>
+  }
+
+  @if (showIcon()) {
+    <app-icon-button (click)="fileInput.click()" icon="edit_circle" />
+  }
+
+  <input
+    #fileInput
+    [id]="inputId"
+    type="file"
+    accept="image/*"
+    (change)="onFileSelected($event)"
+    hidden
+  />
+</label>

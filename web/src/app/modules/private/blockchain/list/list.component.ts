@@ -11,6 +11,7 @@ import { BaseListDirective } from '@app/directives/base';
 import { Column, ColumnType, Blockchain } from '@app/models';
 import { BlockchainService } from '@app/services/blockchain';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
+import { ExpansionPanelComponent } from '@app/components/expansion-panel';
 
 const COLUMNS: Column[] = [
   {
@@ -52,9 +53,10 @@ const COLUMNS: Column[] = [
 
     TranslateModule,
 
-    TableComponent,
-    InputComponent,
+    ExpansionPanelComponent,
     IconButtonComponent,
+    InputComponent,
+    TableComponent,
   ],
   providers: [
     {
@@ -75,10 +77,7 @@ const COLUMNS: Column[] = [
     },
   ],
 })
-export class ListComponent extends BaseListDirective<
-  Blockchain,
-  BlockchainService
-> {
+export class ListComponent extends BaseListDirective<Blockchain> {
   columns = COLUMNS;
 
   displayedColumns = COLUMNS.map(column => column.id);
@@ -104,27 +103,6 @@ export class ListComponent extends BaseListDirective<
         templateRow: this.actionsRow(),
         templateColumn: this.actionsColumn(),
       };
-    });
-  }
-
-  testConnection(id: string) {
-    this.service.testConnection(id).subscribe({
-      next: () => {
-        this.toastr.success('THE_CONNECTION_IS_UP');
-      },
-    });
-  }
-
-  override getCurrentItemId(
-    item: Blockchain,
-  ): string | number | null | undefined {
-    return item.id;
-  }
-
-  updateRouteQueryParameters() {
-    void this.router.navigate([], {
-      queryParams: this.form.value as Record<string, string>,
-      queryParamsHandling: 'merge',
     });
   }
 }

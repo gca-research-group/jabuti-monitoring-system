@@ -78,8 +78,7 @@ export class FormComponent
   implements OnInit, OnDestroy
 {
   protected override service =
-    inject<SmartContractExecutionService>(CRUD_SERVICE);
-  private smartContractService = inject(SmartContractService);
+  inject<SmartContractExecutionService>(CRUD_SERVICE);
   smartContractId: string | null = null;
 
   private onDestroy$ = new Subject();
@@ -88,8 +87,7 @@ export class FormComponent
     return this.form.get('clauseArguments') as FormArray;
   }
 
-  override ngOnInit(): void {
-    super.ngOnInit();
+  ngOnInit(): void {
 
     this.form
       .get('blockchainId')
@@ -151,8 +149,6 @@ export class FormComponent
     this.form.get('smartContractId')?.disable();
     this.form.get('clauseName')?.disable();
   }
-
-  protected override updateFormOnUpdateInitialization(): void {}
 
   execute() {
     if (this.form.invalid) {

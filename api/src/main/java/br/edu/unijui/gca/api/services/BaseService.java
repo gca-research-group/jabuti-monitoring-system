@@ -34,7 +34,8 @@ public abstract class BaseService<
     protected Mapper mapper;
 
     public FindAllResponseDto<List<Entity>> findAll(FilterDto dto, Pageable pageable) {
-        Slice<Entity> data = repository.findBy(specification.build(dto), query -> query.slice(pageable));
+        var spec = specification.build(dto);
+        Slice<Entity> data = repository.findBy(spec, query -> query.slice(pageable));
         return FindAllResponseMapper.fromSlice(data);
     }
 

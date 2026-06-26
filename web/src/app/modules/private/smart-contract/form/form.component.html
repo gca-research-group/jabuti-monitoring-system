@@ -3,11 +3,7 @@
   class="d-flex flex-column col-lg-6 col-sm-12"
   (ngSubmit)="save()"
 >
-  <app-input
-    formControlName="name"
-    label="name"
-    class="col"
-  />
+  <app-input formControlName="name" label="name" class="col" />
 
   <app-blockchain-platform-selector
     formControlName="blockchainPlatform"
@@ -42,14 +38,10 @@
             </mat-panel-title>
           </mat-expansion-panel-header>
           <div class="d-flex align-items-center mb-3" style="gap: 8px">
-            <app-input
-              formControlName="name"
-              label="name"
-              class="col"
-            />
+            <app-input formControlName="name" label="name" class="col" />
           </div>
 
-          <div formArrayName="clauseArguments">
+          <div formArrayName="clauseArguments" class="d-flex flex-wrap gap-4">
             <legend
               class="d-flex justify-content-between align-items-center w-100 mb-1"
             >
@@ -66,32 +58,20 @@
               track argument;
               let argumentIndex = $index
             ) {
-              <div class="mb-3" [formGroupName]="argumentIndex">
-                <mat-expansion-panel class="w-100">
-                  <mat-expansion-panel-header>
-                    <mat-panel-title
-                      class="d-flex justify-content-between align-items-center"
-                    >
-                      <span>
-                        {{ 'argument' | translate }} {{ argumentIndex + 1 }}
-                      </span>
-                      <app-icon-button
-                        icon="delete"
-                        (click)="
-                          removeClauseArgument(clauseIndex, argumentIndex)
-                        "
-                        tooltip="delete"
-                      />
-                    </mat-panel-title>
-                  </mat-expansion-panel-header>
-                  <div class="d-flex align-items-center" style="gap: 8px">
-                    <app-input
-                      formControlName="name"
-                      label="name"
-                      class="col"
-                    />
-                  </div>
-                </mat-expansion-panel>
+              <div
+                class="col d-flex align-items-center gap-1"
+                [formGroupName]="argumentIndex"
+              >
+                <app-input
+                  formControlName="name"
+                  [label]="('argument' | translate) + ' ' + (argumentIndex + 1)"
+                  class="col"
+                />
+                <app-icon-button
+                  icon="delete"
+                  (click)="removeClauseArgument(clauseIndex, argumentIndex)"
+                  tooltip="delete"
+                />
               </div>
             }
           </div>

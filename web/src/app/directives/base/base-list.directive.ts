@@ -1,5 +1,5 @@
 import { ToastrService } from 'ngx-toastr';
-import { debounceTime, finalize, Subject, Subscription, takeUntil } from 'rxjs';
+import { debounceTime } from 'rxjs';
 
 import {
   Directive,
@@ -22,11 +22,11 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 import { removeEmptyKeys } from '@app/utils';
 
 @Directive()
-export abstract class BaseListDirective<T, R extends CrudService<T>>
+export abstract class BaseListDirective<T extends { id?: number|string }>
   implements AfterViewInit, OnDestroy
 {
   protected breadcrumbService = inject(BreadcrumbService);
-  protected service = inject<R>(CRUD_SERVICE);
+  protected service = inject<CrudService<T>>(CRUD_SERVICE);
   protected formBuilder = inject(FormBuilder);
   protected cdk = inject(ChangeDetectorRef);
   protected activatedRoute = inject(ActivatedRoute);
@@ -43,9 +43,6 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
   tableHeight!: string;
 
   protected breadCrumb = inject(BREADCRUMB);
-
-  protected onDestroy$ = new Subject();
-  private searchSubscription$?: Subscription;
 
   data: T[] = [];
   total = 0;
@@ -70,12 +67,11 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
 
   ngOnDestroy(): void {
     this.breadcrumbService.reset();
-    this.onDestroy$.unsubscribe();
   }
 
   private buildForm() {
     this.form = this.formBuilder.group({
-      page: new FormControl(0),
+      page: new FormControl(1),
       pageSize: new FormControl(20),
       orderBy: new FormControl(null),
       orderDirection: new FormControl(null),
@@ -89,21 +85,20 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
     this.breadcrumbService.update(this.breadCrumb);
   }
 
-  private bindQueryParamToForm() {
+  protected bindQueryParamToForm() {
     const queryParams = this.activatedRoute.snapshot.queryParams;
     this.form.patchValue(queryParams as object, { emitEvent: false });
   }
 
   private listenFormChanges() {
-    this.form.valueChanges
-      .pipe(debounceTime(300), takeUntil(this.onDestroy$))
-      .subscribe(() => {
-        this.search();
-        void this.router.navigate([], {
-          queryParams: this.form.value as Record<string, string>,
-          queryParamsHandling: 'merge',
-        });
+    this.form.valueChanges.pipe(debounceTime(300)).subscribe(() => {
+      this.form.patchValue({ page: 1 }, { emitEvent: false });
+      this.search();
+      void this.router.navigate([], {
+        queryParams: this.form.value as Record<string, string>,
+        queryParamsHandling: 'merge',
       });
+    });
   }
 
   private updateTableSize() {
@@ -112,20 +107,16 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
     this.tableHeight = `calc(100vh - var(--jms-toolbar-height) - (2 * var(--jms-content-vertical-padding)) - ${form?.offsetHeight}px - 16px)`;
   }
 
-  abstract getCurrentItemId(item: T): string | number | null | undefined;
-
   openDialog(item: T): void {
     const dialogRef = this.dialog.open(DeleteDialogComponent, {
-      data: this.getCurrentItemId(item),
+      data: item.id,
     });
 
     dialogRef.afterClosed().subscribe((id: number | undefined) => {
       if (id) {
         this.service.delete(id).subscribe({
           next: () => {
-            this.data = this.data.filter(
-              item => this.getCurrentItemId(item) !== id,
-            );
+            this.data = this.data.filter(item => item.id !== id);
             this.toastr.success('DELETED_SUCCESSFULLY');
           },
           error: error => {
@@ -151,7 +142,6 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
   findAll() {
     this.service
       .findAll(removeEmptyKeys(this.form.value as Record<string, FormControl>))
-      .pipe(takeUntil(this.onDestroy$))
       .subscribe({
         next: response => {
           this.data = [...this.data, ...response.data];
@@ -168,31 +158,25 @@ export abstract class BaseListDirective<T, R extends CrudService<T>>
     const _params = removeEmptyKeys<Record<string, string | number>>(
       this.form.value as Record<string, FormControl>,
     );
-    _params['page'] = 0;
+    _params['page'] = 1;
 
-    this.loading = true;
-    this.searchSubscription$?.unsubscribe();
-
-    this.searchSubscription$ = this.service
-      .findAll(_params)
-      .pipe(finalize(() => (this.loading = false)))
-      .subscribe({
-        next: response => {
-          this.data = response.data;
-          this.hasMore = response.hasMore;
-          this.total = response.total;
-        },
-        error: error => {
-          console.log('[error]', error);
-        },
-      });
+    this.service.findAll(_params).subscribe({
+      next: response => {
+        this.data = response.data;
+        this.hasMore = response.hasMore;
+        this.total = response.total;
+      },
+      error: error => {
+        console.log('[error]', error);
+      },
+    });
   }
 
   sort(event: Sort) {
     this.form.patchValue({
       orderBy: event.active,
       orderDirection: event.direction,
-      page: 0,
+      page: 1,
     });
   }
 }

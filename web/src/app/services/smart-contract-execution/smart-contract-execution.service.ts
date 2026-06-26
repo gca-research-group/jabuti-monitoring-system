@@ -8,12 +8,13 @@ import {
 } from '@app/models';
 
 import { environment } from '../../../environments/environment';
+import { BaseService } from '../base-service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SmartContractExecutionService
-  implements CrudService<SmartContractExecution>
+   extends BaseService<SmartContractExecution> implements CrudService<SmartContractExecution>
 {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/smart-contract-execution`;

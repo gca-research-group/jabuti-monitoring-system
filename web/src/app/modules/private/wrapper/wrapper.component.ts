@@ -14,6 +14,11 @@ import { Sidebar } from '@app/models';
 export class WrapperComponent {
   menus: Sidebar[] = [
     { label: 'home', icon: 'home', url: '' },
+    {
+        label: 'users',
+        icon: 'group',
+        url: 'user',
+    },
     { label: 'blockchain-connection', icon: 'link', url: 'blockchain' },
     { label: 'smart-contract', icon: 'article', url: 'smart-contract' },
     {

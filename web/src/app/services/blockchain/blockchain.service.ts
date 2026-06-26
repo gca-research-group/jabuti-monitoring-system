@@ -9,11 +9,15 @@ import {
 } from '@app/models';
 
 import { environment } from '../../../environments/environment';
+import { BaseService } from '../base-service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class BlockchainService implements CrudService<Blockchain> {
+export class BlockchainService
+  extends BaseService<Blockchain>
+  implements CrudService<Blockchain>
+{
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/blockchain`;
 
@@ -37,7 +41,7 @@ export class BlockchainService implements CrudService<Blockchain> {
     });
   }
 
-  findById(id: string) {
+  findById(id: number | string) {
     return this.http.get<Blockchain>(`${this.url}/${id}`);
   }
 

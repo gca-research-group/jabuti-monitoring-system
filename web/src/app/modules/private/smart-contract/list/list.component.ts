@@ -12,6 +12,7 @@ import { BaseListDirective } from '@app/directives/base';
 import { Column, ColumnType, SmartContract } from '@app/models';
 import { SmartContractService } from '@app/services/smart-contract';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
+import { ExpansionPanelComponent } from '@app/components/expansion-panel';
 
 const COLUMNS: Column[] = [
   {
@@ -54,6 +55,7 @@ const COLUMNS: Column[] = [
     TranslateModule,
 
     BlockchainPlatformSelectorComponent,
+    ExpansionPanelComponent,
     IconButtonComponent,
     InputComponent,
     TableComponent,
@@ -77,10 +79,7 @@ const COLUMNS: Column[] = [
     },
   ],
 })
-export class ListComponent extends BaseListDirective<
-  SmartContract,
-  SmartContractService
-> {
+export class ListComponent extends BaseListDirective<SmartContract> {
   columns = COLUMNS;
 
   displayedColumns = COLUMNS.map(column => column.id);
@@ -107,19 +106,6 @@ export class ListComponent extends BaseListDirective<
         templateRow: this.actionsRow(),
         templateColumn: this.actionsColumn(),
       };
-    });
-  }
-
-  override getCurrentItemId(
-    item: SmartContract,
-  ): string | number | null | undefined {
-    return item.id;
-  }
-
-  updateRouteQueryParameters() {
-    void this.router.navigate([], {
-      queryParams: this.form.value as Record<string, string>,
-      queryParamsHandling: 'merge',
     });
   }
 }

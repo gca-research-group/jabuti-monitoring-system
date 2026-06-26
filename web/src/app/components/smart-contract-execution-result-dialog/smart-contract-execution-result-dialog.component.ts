@@ -1,6 +1,6 @@
+import { NgxJsonViewerModule } from 'ngx-json-viewer';
 import { TranslateModule } from '@ngx-translate/core';
 
-import { JsonPipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import {
@@ -12,7 +12,6 @@ import {
 } from '@angular/material/dialog';
 
 import { SmartContractExecution } from '@app/models';
-import { IsJsonPipe } from '@app/pipes';
 
 @Component({
   selector: 'app-smart-contract-execution-result-dialog',
@@ -24,9 +23,7 @@ import { IsJsonPipe } from '@app/pipes';
     MatDialogActions,
     MatButton,
 
-    JsonPipe,
-
-    IsJsonPipe,
+    NgxJsonViewerModule,
 
     TranslateModule,
   ],

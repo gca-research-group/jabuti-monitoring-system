@@ -1,12 +1,6 @@
 <h2 mat-dialog-title>{{ 'smart-contract-execution' | translate }}</h2>
 <mat-dialog-content>
-
-  @if (data.result | isJson) {
-    <pre>{{ data.result | json }}</pre>
-  } @else {
-    <span [innerText]="data.result"></span>
-  }
-
+  <ngx-json-viewer [json]="data" />
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-button (click)="ok()">Ok</button>

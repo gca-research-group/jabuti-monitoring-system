@@ -1,0 +1,61 @@
+<app-expansion-panel title="filters" #filters>
+  <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px">
+    <app-input
+      formControlName="id"
+      label="id"
+      type="number"
+      [min]="1"
+      class="col"
+    />
+
+    <app-input formControlName="name" label="name" class="col" />
+
+    <app-input formControlName="email" label="email" class="col" />
+
+    <app-status-selector formControlName="status" class="col" />
+  </form>
+</app-expansion-panel>
+
+<app-table
+  [height]="tableHeight"
+  [columns]="columns"
+  [displayedColumns]="displayedColumns"
+  [dataSource]="data"
+  (loadMore)="scroll()"
+  (sort)="sort($event)"
+  [total]="total"
+>
+  <ng-template #actionsColumn>
+    <app-action-buttons-container>
+      <app-icon-anchor-add />
+    </app-action-buttons-container>
+  </ng-template>
+
+  <ng-template #actionsRow let-element="element">
+    <app-action-buttons-container justifyContent="right">
+      @if (element.isResearcher) {
+        <a [routerLink]="['./', element.id]">
+          <app-icon-button icon="co_present" tooltip="researcher" />
+        </a>
+      }
+
+      @if (element.isStudent) {
+        <a [routerLink]="['./', element.id]">
+          <app-icon-button icon="school" tooltip="student" />
+        </a>
+      }
+
+      @if (!element.isStudent && element.isFormerStudent) {
+        <a [routerLink]="['./', element.id]">
+          <app-icon-button icon="lightbulb" tooltip="former-student" />
+        </a>
+      }
+
+      <app-icon-status [status]="element.status" />
+
+      <app-icon-anchor-edit [id]="element.id" />
+
+      <app-icon-button-delete (click)="openDialog(element)" />
+    </app-action-buttons-container>
+  </ng-template>
+</app-table>

@@ -13,7 +13,7 @@ import {
 @State<User>({
   name: 'user',
   defaults: {
-    isAuthenticated: true,
+    isAuthenticated: false,
     email: '',
     name: '',
     photo: '',
@@ -21,7 +21,7 @@ import {
   },
 })
 @Injectable()
-export class UserState {
+export class CurrentUserState {
   @Action(AddCurrentUserAction)
   add(ctx: StateContext<User>, { payload }: AddCurrentUserAction) {
     let state = ctx.getState();

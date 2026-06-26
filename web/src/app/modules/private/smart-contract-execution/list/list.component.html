@@ -1,27 +1,24 @@
-<form [formGroup]="form" class="mb-3 d-flex" style="gap: 8px" #filters>
-  <app-input
-    formControlName="id"
-    label="id"
-    [min]="1"
-    class="col"
-  />
+<app-expansion-panel title="filters" #filters>
+  <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
+    <app-input formControlName="id" label="id" [min]="1" class="col" />
 
-  <app-input
-    formControlName="smartContractName"
-    label="smart-contract"
-    class="col"
-  />
+    <app-input
+      formControlName="smartContractName"
+      label="smart-contract"
+      class="col"
+    />
 
-  <app-blockchain-platform-selector
-    formControlName="blockchainPlatform"
-    class="col"
-  />
+    <app-blockchain-platform-selector
+      formControlName="blockchainPlatform"
+      class="col"
+    />
 
-  <app-smart-contract-execution-status-selector
-    formControlName="status"
-    class="col"
-  />
-</form>
+    <app-smart-contract-execution-status-selector
+      formControlName="status"
+      class="col"
+    />
+  </form>
+</app-expansion-panel>
 
 <app-table
   [height]="tableHeight"

@@ -1,0 +1,35 @@
+:host {
+  display: inline-block;
+}
+
+.dropzone {
+  display: block;
+  padding: 4px;
+  text-align: center;
+  border: 2px dashed #ccc;
+  cursor: pointer;
+  background-size: cover;
+  position: relative;
+}
+
+.dropzone.dragover {
+  border-color: #000;
+  background-color: #f0f0f0;
+}
+
+app-icon-button {
+  position: absolute;
+  right: -20px;
+  top: 45%;
+  border: 2px dashed #ccc;
+  background-color: #f1f1f1;
+  border-radius: 50%;
+}
+
+.description {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}

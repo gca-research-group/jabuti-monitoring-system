@@ -1,11 +1,10 @@
-<form [formGroup]="form" class="mb-3 d-flex" style="gap: 8px" #filters>
-  <app-input
-    formControlName="id"
-    label="id"
-    class="col"
-  />
-  <app-input formControlName="name" label="name" class="col" />
-</form>
+<app-expansion-panel title="filters" #filters>
+  <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
+    <app-input formControlName="id" label="id" class="col" />
+
+    <app-input formControlName="name" label="name" class="col" />
+  </form>
+</app-expansion-panel>
 
 <app-table
   [height]="tableHeight"
@@ -32,11 +31,6 @@
         icon="delete"
         tooltip="delete"
         (click)="openDialog(element)"
-      />
-      <app-icon-button
-        icon="play_circle"
-        tooltip="test-blockchain-connection"
-        (click)="testConnection(element.id)"
       />
     </div>
   </ng-template>

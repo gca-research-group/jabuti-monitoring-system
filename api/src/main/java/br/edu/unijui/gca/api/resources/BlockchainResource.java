@@ -2,7 +2,7 @@ package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.dtos.BlockchainConfigDto;
 import br.edu.unijui.gca.api.dtos.BlockchainDto;
-import br.edu.unijui.gca.api.dtos.BlockchainFilterDto;
+import br.edu.unijui.gca.api.dtos.filter.BlockchainFilterDto;
 import br.edu.unijui.gca.api.dtos.BlockchainPlatformDto;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.enums.BlockchainPlatform;

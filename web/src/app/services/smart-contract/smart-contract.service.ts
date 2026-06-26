@@ -4,11 +4,12 @@ import { inject, Injectable } from '@angular/core';
 import { CrudService, FindAllResponse, SmartContract } from '@app/models';
 
 import { environment } from '../../../environments/environment';
+import { BaseService } from '../base-service';
 
 @Injectable({
   providedIn: 'root',
 })
-export class SmartContractService implements CrudService<SmartContract> {
+export class SmartContractService extends BaseService<SmartContract> implements CrudService<SmartContract>  {
   private readonly http = inject(HttpClient);
   private readonly url = `${environment.apiUrl}/smart-contract`;
 
@@ -22,7 +23,7 @@ export class SmartContractService implements CrudService<SmartContract> {
     return this.http.get<SmartContract>(`${this.url}/${id}`);
   }
 
-  delete(id: string) {
+  delete(id: number | string) {
     return this.http.delete<void>(`${this.url}/${id}`);
   }
 

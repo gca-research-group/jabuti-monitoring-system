@@ -8,7 +8,6 @@
     <include file="db/changelog/migrations/180120261040-blockchains.xml"/>
     <include file="db/changelog/migrations/180120261042-smart-contracts.xml"/>
     <include file="db/changelog/migrations/180120261043-smart-contract-executions.xml"/>
-    <include file="db/changelog/migrations/180120261044-smart-contract-execution-events.xml"/>
 
     <include file="db/changelog/seeds/180120261057-admin-user.xml" />
 

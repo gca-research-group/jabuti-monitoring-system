@@ -1,10 +1,11 @@
 @if (svg() && icon()) {
   <mat-icon
-    class="material-symbols-outlined"
     matTooltipPosition="right"
     [matTooltip]="tooltip() ?? '' | translate"
     [svgIcon]="icon()!"
   />
+} @else if (img()) {
+  <img [src]="img()" [alt]="tooltip()" />
 } @else {
   <mat-icon
     class="material-symbols-outlined"

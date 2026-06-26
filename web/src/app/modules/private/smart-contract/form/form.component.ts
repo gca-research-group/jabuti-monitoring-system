@@ -87,26 +87,19 @@ export class FormComponent extends BaseFormDirective<
     });
   }
 
-  protected override updateFormOnUpdateInitialization(): void {}
-
-  override find(id: string) {
-    this.service.findById(id).subscribe({
-      next: item => {
-        for (const clause of item.clauses ?? []) {
+  protected override patchValue(item: SmartContract): void {
+          for (const clause of item.clauses ?? []) {
           this.addClause(false);
           const index = this.clauses.length - 1;
 
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          for (const argument of clause.clauseArguments ?? []) {
+          for (const _ of clause.clauseArguments ?? []) {
             this.addClauseArgument(index);
           }
         }
 
-        this.form.patchValue({
+        super.patchValue({
           ...item,
         });
-      },
-    });
   }
 
   addClause(addClauseArgument = true) {

@@ -30,11 +30,11 @@ import {
 } from '@angular/core';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 import { requestInterceptor } from './interceptors';
-import { UserState } from './state/current-user';
+import { CurrentUserState } from './state/current-user';
 import { PreferencesState } from './state/preferences';
 
 echarts.use([
@@ -59,13 +59,13 @@ const httpLoaderFactory: (http: HttpClient) => TranslateHttpLoader = (
 export const appConfig: ApplicationConfig = {
   providers: [
     provideStore(
-      [UserState, PreferencesState],
+      [CurrentUserState, PreferencesState],
       withNgxsStoragePlugin({
         keys: '*',
       }),
     ),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideAnimationsAsync(),
     provideToastr({
       closeButton: true,

@@ -1,7 +1,7 @@
 package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.dtos.SmartContractDto;
-import br.edu.unijui.gca.api.dtos.SmartContractFilterDto;
+import br.edu.unijui.gca.api.dtos.filter.SmartContractFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.services.SmartContractService;
 import org.springframework.web.bind.annotation.RequestMapping;

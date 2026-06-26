@@ -1,3 +1,4 @@
+@if (!isLoading()) {
 <button
   mat-icon-button
   type="button"
@@ -5,11 +6,10 @@
   [matTooltip]="tooltip() | translate"
   matTooltipPosition="right"
   [attr.aria-label]="ariaLabel()"
+  [disabled]="disabled()"
 >
-  <mat-icon
-    [attr.aria-label]="ariaLabel()"
-    class="material-symbols-outlined"
-    [class]="color()"
-    >{{ icon() }}</mat-icon
-  >
+  <app-icon [icon]="icon()" [svg]="svg()" [img]="img()" [color]="color()" />
 </button>
+} @else {
+  <app-spinner [size]="20" />
+}

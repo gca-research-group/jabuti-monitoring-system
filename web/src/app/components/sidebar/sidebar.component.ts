@@ -88,7 +88,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .subscribe(_ => {
         if (this.currentTitle) {
           this.translateService.get(this.currentTitle).subscribe(translated => {
-            this.title.setTitle(`GCA | ${translated}`);
+            this.title.setTitle(`JMS | ${translated}`);
           });
         }
       });
@@ -157,7 +157,7 @@ export class SidebarComponent implements OnInit, OnDestroy {
       .get(title)
       .pipe(takeUntil(this.onDestroy$))
       .subscribe(translated => {
-        this.title.setTitle(`GCA | ${translated}`);
+        this.title.setTitle(`JMS | ${translated}`);
       });
   }
 

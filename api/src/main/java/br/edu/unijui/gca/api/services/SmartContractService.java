@@ -1,6 +1,7 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.dtos.*;
+import br.edu.unijui.gca.api.dtos.filter.SmartContractFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.mappers.SmartContractMapper;
 import br.edu.unijui.gca.api.repositories.SmartContractRepository;
