@@ -13,4 +13,5 @@ public class SmartContractExecutionFilterDto extends BaseFilterDto {
     private String status;
     private String blockchainPlatform;
     private String smartContractName;
+    private String metadata;
 }

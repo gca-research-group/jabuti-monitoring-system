@@ -25,6 +25,13 @@ public class SmartContractExecutionSpecification implements ISpecification<Smart
                 predicates.add(criteriaBuilder.like(root.get("status"), filter.getStatus()));
             }
 
+            if (filter.getMetadata() != null) {
+                predicates.add(criteriaBuilder.like(
+                        criteriaBuilder.toString(root.get("metadata")),
+                        "%" + filter.getMetadata() + "%"
+                ));
+            }
+
             if (filter.getBlockchainPlatform() != null) {
                 Expression<String> expression =
                         criteriaBuilder.function(

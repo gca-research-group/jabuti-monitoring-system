@@ -1,4 +1,4 @@
-<app-expansion-panel title="filters" #filters>
+<app-expansion-panel [title]="'filters'" #filters>
   <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
     <app-input formControlName="id" label="id" class="col" />
     <app-input formControlName="name" label="name" class="col" />

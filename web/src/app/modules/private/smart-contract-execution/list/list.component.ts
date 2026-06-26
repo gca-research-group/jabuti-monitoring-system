@@ -131,6 +131,7 @@ export class ListComponent
 
   protected updateForm() {
     this.form.addControl('id', new FormControl());
+    this.form.addControl('metadata', new FormControl());
     this.form.addControl('smartContractName', new FormControl());
     this.form.addControl('blockchainPlatform', new FormControl());
     this.form.addControl('status', new FormControl());

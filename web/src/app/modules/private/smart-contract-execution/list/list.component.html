@@ -1,6 +1,12 @@
-<app-expansion-panel title="filters" #filters>
+<app-expansion-panel [title]="'filters'" #filters>
   <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
     <app-input formControlName="id" label="id" [min]="1" class="col" />
+
+    <app-input
+      formControlName="metadata"
+      label="metadata"
+      class="col"
+    />
 
     <app-input
       formControlName="smartContractName"
