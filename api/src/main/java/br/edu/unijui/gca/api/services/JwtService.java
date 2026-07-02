@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 
-
 @Component
 public class JwtService {
 
@@ -61,7 +60,7 @@ public class JwtService {
         }
     }
 
-    public boolean isTokenValid(String token, User user) {
-        return getSubject(token).equals(user.getEmail());
+    public boolean isTokenInvalid(String token, User user) {
+        return !getSubject(token).equals(user.getEmail());
     }
 }

@@ -9,9 +9,11 @@ import io.grpc.ChannelCredentials;
 import io.grpc.Grpc;
 import io.grpc.ManagedChannel;
 import io.grpc.TlsChannelCredentials;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hyperledger.fabric.client.*;
+import org.hyperledger.fabric.client.Contract;
+import org.hyperledger.fabric.client.Gateway;
+import org.hyperledger.fabric.client.Network;
 import org.hyperledger.fabric.client.identity.*;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class HyperledgerFabricService implements IBlockchainConnection<Gateway.Builder, HyperledgerFabricConfigDto> {
 
     private final Map<String, Gateway.Builder> connections = new HashMap<>();

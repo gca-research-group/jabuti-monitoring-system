@@ -1,22 +1,22 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
+import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.listener.MessageListenerContainer;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @Service
 public class BenchmarkService {
-    @Autowired
-    private RabbitListenerEndpointRegistry registry;
 
-    @Autowired
-    private RabbitAdmin rabbitAdmin;
+    private final RabbitListenerEndpointRegistry registry;
+
+    private final RabbitAdmin rabbitAdmin;
 
     public void start() {
         registry.getListenerContainers()

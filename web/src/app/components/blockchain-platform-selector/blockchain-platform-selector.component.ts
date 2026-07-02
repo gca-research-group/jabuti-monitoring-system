@@ -32,7 +32,7 @@ export class BlockchainPlatformSelectorComponent
     this.service
       .platforms({
         orderDirection: 'asc',
-        pageSize: 1000,
+        pageSize: 20,
       })
       .subscribe({
         next: items => {

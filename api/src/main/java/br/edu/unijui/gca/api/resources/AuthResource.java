@@ -4,20 +4,17 @@ import br.edu.unijui.gca.api.dtos.AuthRequestDto;
 import br.edu.unijui.gca.api.dtos.AuthResponseDto;
 import br.edu.unijui.gca.api.services.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
 public class AuthResource {
 
     private final AuthService authService;
-
-    public AuthResource(
-            AuthService authService) {
-        this.authService = authService;
-    }
 
     @PostMapping("/login")
     public AuthResponseDto login(@RequestBody AuthRequestDto request, HttpServletResponse response) {

@@ -1,64 +1,53 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.dtos.BaseDto;
-import br.edu.unijui.gca.api.dtos.FindAllResponseDto;
 import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
-import br.edu.unijui.gca.api.mappers.FindAllResponseMapper;
 import br.edu.unijui.gca.api.interfaces.IMapper;
 import br.edu.unijui.gca.api.interfaces.IRepository;
 import br.edu.unijui.gca.api.specifications.ISpecification;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
 
-@Service
+@RequiredArgsConstructor
 public abstract class BaseService<
         Entity,
-        IdentifierType,
-        EntityDto extends BaseDto<IdentifierType>,
+        ID,
         FilterDto,
-        Repository extends IRepository<Entity, IdentifierType>,
-        Specification extends ISpecification<Entity, FilterDto>,
-        Mapper extends IMapper<Entity, EntityDto>> {
+        EntityDto extends BaseDto<ID>> {
 
-    @Autowired
-    protected Repository repository;
+    protected abstract IRepository<Entity, ID> repository();
 
-    @Autowired
-    protected Specification specification;
+    protected abstract ISpecification<Entity, FilterDto> specification();
 
-    @Autowired
-    protected Mapper mapper;
+    protected abstract IMapper<Entity, EntityDto> mapper();
 
-    public FindAllResponseDto<List<Entity>> findAll(FilterDto dto, Pageable pageable) {
-        var spec = specification.build(dto);
-        Slice<Entity> data = repository.findBy(spec, query -> query.slice(pageable));
-        return FindAllResponseMapper.fromSlice(data);
+    public Slice<Entity> findAll(FilterDto dto, Pageable pageable) {
+        var spec = specification().build(dto);
+        return repository().findBy(spec, query -> query.slice(pageable));
     }
 
-    public Entity findById(IdentifierType id) {
-        return repository.findById(id).orElseThrow(ResourceNotFoundException::new);
+    public Entity findById(ID id) {
+        return repository().findById(id).orElseThrow(ResourceNotFoundException::new);
     }
 
-    public void remove(IdentifierType id) {
-        repository.deleteById(id);
+    public void remove(ID id) {
+        repository().deleteById(id);
     }
 
     public Entity create(EntityDto dto) {
-        Entity entity = mapper.toEntity(dto);
-        return repository.save(entity);
+        Entity entity = mapper().toEntity(dto);
+        return repository().save(entity);
     }
 
-    public Entity update(IdentifierType id, EntityDto dto) {
-        Entity entity = findById(id);
-        mapper.updateEntity(dto, entity);
-        return repository.save(entity);
+    public Entity update(EntityDto dto) {
+        Entity entity = repository().findById(dto.getId()).orElseThrow(ResourceNotFoundException::new);
+        mapper().updateEntity(dto, entity);
+        return update(entity);
     }
 
     public Entity update(Entity entity) {
-        return repository.save(entity);
+        return repository().save(entity);
     }
 }

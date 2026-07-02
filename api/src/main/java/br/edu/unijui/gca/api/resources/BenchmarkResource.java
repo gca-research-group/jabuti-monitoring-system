@@ -1,14 +1,15 @@
 package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.services.BenchmarkService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+@RequiredArgsConstructor
 @RestController()
 @RequestMapping("/benchmark")
 public class BenchmarkResource {
-    @Autowired
-    private BenchmarkService service;
+    private final BenchmarkService service;
 
     @PostMapping("/start")
     public void start() {

@@ -1,6 +1,8 @@
 package br.edu.unijui.gca.api.entities;
 
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +14,8 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,10 +44,10 @@ public class SmartContractExecution {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private Map<String, String> timestamps;
+    private Map<SmartContractExecutionEvent, String> timestamps;
 
     @Column(nullable = false)
-    private String status;
+    private SmartContractExecutionStatus status;
 
     @Column
     private String remarks;
@@ -55,4 +59,33 @@ public class SmartContractExecution {
     @LastModifiedDate
     @Column
     private Instant updatedAt;
+
+    public void published(SmartContractExecutionEvent key) {
+        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        status = SmartContractExecutionStatus.PUBLISHED;
+    }
+
+    public void consumed(SmartContractExecutionEvent key) {
+        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        status = SmartContractExecutionStatus.CONSUMED;
+    }
+
+    public void processing(SmartContractExecutionEvent key) {
+        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        status = SmartContractExecutionStatus.PROCESSING;
+    }
+
+    public void processed(SmartContractExecutionEvent key) {
+        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        status = SmartContractExecutionStatus.PROCESSED;
+    }
+
+    public void failed(Throwable error) {
+        status = SmartContractExecutionStatus.FAILED;
+        result = error.getMessage();
+    }
+
+    public void complete() {
+        status = SmartContractExecutionStatus.COMPLETE;
+    }
 }

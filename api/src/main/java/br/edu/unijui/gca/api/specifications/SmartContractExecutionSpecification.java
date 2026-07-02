@@ -1,6 +1,6 @@
 package br.edu.unijui.gca.api.specifications;
 
-import br.edu.unijui.gca.api.dtos.SmartContractExecutionFilterDto;
+import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;

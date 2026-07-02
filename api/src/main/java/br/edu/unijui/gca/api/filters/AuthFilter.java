@@ -89,7 +89,7 @@ public class AuthFilter extends OncePerRequestFilter {
 
         User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
-        if (!jwtService.isTokenValid(bearerToken.token(), user)) {
+        if (jwtService.isTokenInvalid(bearerToken.token(), user)) {
             throw new InvalidTokenException();
         }
 

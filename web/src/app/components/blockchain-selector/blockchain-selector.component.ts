@@ -35,7 +35,7 @@ export class BlockchainSelectorComponent extends BaseSelectorDirective {
       .findAll({
         orderBy: this.orderBy(),
         orderDirection: 'asc',
-        pageSize: 1000,
+        pageSize: 20,
       })
       .subscribe({
         next: response => {

@@ -1,6 +1,6 @@
 <h2 mat-dialog-title>{{ 'smart-contract-execution' | translate }}</h2>
 <mat-dialog-content>
-  <ngx-json-viewer [json]="data" />
+  <ngx-json-viewer [json]="data" [expanded]="false"/>
 </mat-dialog-content>
 <mat-dialog-actions>
   <button mat-button (click)="ok()">Ok</button>

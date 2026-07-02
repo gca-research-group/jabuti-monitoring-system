@@ -1,5 +1,9 @@
-package br.edu.unijui.gca.api.dtos;
+package br.edu.unijui.gca.api.dtos.smartcontractexecution;
 
+import br.edu.unijui.gca.api.dtos.BaseDto;
+import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +21,7 @@ import java.util.UUID;
 public class SmartContractExecutionDto extends BaseDto<UUID> {
     private SmartContractPayloadDto payload;
     private Map<String, Object> metadata;
-    private Map<String, String> timestamps;
+    private Map<SmartContractExecutionEvent, String> timestamps;
     private String result;
-    private String status;
+    private SmartContractExecutionStatus status;
 }

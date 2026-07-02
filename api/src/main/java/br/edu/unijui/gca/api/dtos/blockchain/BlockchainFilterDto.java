@@ -1,5 +1,6 @@
-package br.edu.unijui.gca.api.dtos.filter;
+package br.edu.unijui.gca.api.dtos.blockchain;
 
+import br.edu.unijui.gca.api.dtos.BaseFilterDto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

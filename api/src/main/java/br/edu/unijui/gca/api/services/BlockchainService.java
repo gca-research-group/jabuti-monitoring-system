@@ -1,14 +1,15 @@
 package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.dtos.BlockchainConfigDto;
-import br.edu.unijui.gca.api.dtos.BlockchainDto;
-import br.edu.unijui.gca.api.dtos.filter.BlockchainFilterDto;
 import br.edu.unijui.gca.api.dtos.BlockchainPlatformDto;
+import br.edu.unijui.gca.api.dtos.blockchain.BlockchainDto;
+import br.edu.unijui.gca.api.dtos.blockchain.BlockchainFilterDto;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.enums.BlockchainPlatform;
 import br.edu.unijui.gca.api.mappers.BlockchainMapper;
 import br.edu.unijui.gca.api.repositories.BlockchainRepository;
 import br.edu.unijui.gca.api.specifications.BlockchainSpecification;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +17,30 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+@RequiredArgsConstructor
 @Service
-public class BlockchainService
-        extends BaseService<
-            Blockchain, UUID, BlockchainDto, BlockchainFilterDto, BlockchainRepository, BlockchainSpecification, BlockchainMapper> {
+public class BlockchainService extends BaseService<Blockchain, UUID, BlockchainFilterDto, BlockchainDto> {
+
+    private final BlockchainRepository repository;
+
+    private final BlockchainSpecification specification;
+
+    private final BlockchainMapper mapper;
+
+    @Override
+    protected BlockchainRepository repository() {
+        return repository;
+    }
+
+    @Override
+    protected BlockchainSpecification specification() {
+        return specification;
+    }
+
+    @Override
+    protected BlockchainMapper mapper() {
+        return mapper;
+    }
 
     @Value("${app.backend-url}")
     private String backendUrl;

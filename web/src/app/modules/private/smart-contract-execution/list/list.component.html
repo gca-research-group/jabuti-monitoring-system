@@ -2,11 +2,7 @@
   <form [formGroup]="form" class="d-flex flex-wrap" style="gap: 16px" #filters>
     <app-input formControlName="id" label="id" [min]="1" class="col" />
 
-    <app-input
-      formControlName="metadata"
-      label="metadata"
-      class="col"
-    />
+    <app-input formControlName="metadata" label="metadata" class="col" />
 
     <app-input
       formControlName="smartContractName"
@@ -87,12 +83,6 @@
   </ng-template>
 
   <ng-template #succeededRow let-element="element">
-    <div
-      [attr.data-status]="element.status"
-      [ngStyle]="{
-        backgroundColor: (element.status | statusColor),
-      }"
-      style="height: 16px; width: 16px; border-radius: 50%"
-    ></div>
+    <app-icon-status [status]="element.status" [items]="status" />
   </ng-template>
 </app-table>

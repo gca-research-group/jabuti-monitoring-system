@@ -1,69 +1,60 @@
 package br.edu.unijui.gca.api.resources;
 
 import br.edu.unijui.gca.api.dtos.BaseDto;
-import br.edu.unijui.gca.api.dtos.filter.BaseFilterDto;
+import br.edu.unijui.gca.api.dtos.BaseFilterDto;
 import br.edu.unijui.gca.api.dtos.FindAllResponseDto;
-import br.edu.unijui.gca.api.enums.OrderDirection;
+import br.edu.unijui.gca.api.interfaces.IMapper;
 import br.edu.unijui.gca.api.services.BaseService;
+import br.edu.unijui.gca.api.utils.PageBuilder;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.util.StringUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
+@RequiredArgsConstructor
 public abstract class BaseResource<
         Entity,
-        IdentifierType,
-        EntityDto extends BaseDto<IdentifierType>,
+        ID,
         FilterDto extends BaseFilterDto,
-        Service extends BaseService<Entity, IdentifierType, EntityDto, FilterDto, ?, ?, ?>> {
+        EntityDto extends BaseDto<ID>> {
 
-    @Autowired
-    protected Service service;
+    protected abstract IMapper<Entity, EntityDto> mapper();
+
+    protected abstract BaseService<Entity, ID, FilterDto, EntityDto> service();
 
     @GetMapping
-    public FindAllResponseDto<List<Entity>> findAll(FilterDto filterDto) {
-        int page = filterDto.getPage() > 0 ? filterDto.getPage() - 1 : filterDto.getPage();
-        Sort sort = StringUtils.hasText(filterDto.getOrderBy()) ? Sort.by(filterDto.getOrderBy()) : Sort.by("id");
-
-        OrderDirection orderDirection = OrderDirection.fromValue(filterDto.getOrderDirection());
-
-        if (OrderDirection.ASC.equals(orderDirection)) {
-            sort.ascending();
-        } else {
-            sort.descending();
-        }
-
-        Pageable pageable = PageRequest.of(
-            page,
-            filterDto.getPageSize(),
-            sort
-        );
-
-        return service.findAll(filterDto, pageable);
+    public FindAllResponseDto<List<EntityDto>> findAll(@Valid FilterDto filterDto) {
+        Slice<Entity> data = service().findAll(filterDto, PageBuilder.from(filterDto));
+        return FindAllResponseDto.<List<EntityDto>>builder()
+                .data(data.getContent().stream().map(mapper()::toDto).toList())
+                .hasMore(data.hasNext())
+                .build();
     }
 
     @GetMapping("/{id}")
-    public Entity findById(@PathVariable IdentifierType id) {
-        return service.findById(id);
+    public EntityDto findById(@PathVariable ID id) {
+        Entity entity = service().findById(id);
+        return mapper().toDto(entity);
     }
 
     @PostMapping
-    public Entity create(@Valid @RequestBody EntityDto dto) {
-        return service.create(dto);
+    public EntityDto create(@Valid @RequestBody EntityDto dto) {
+        Entity entity = service().create(dto);
+        return mapper().toDto(entity);
     }
 
     @PutMapping("/{id}")
-    public Entity update(@PathVariable IdentifierType id, @Valid @RequestBody EntityDto dto) {
-        return service.update(id, dto);
+    public EntityDto update(@PathVariable ID id, @Valid @RequestBody EntityDto dto) {
+        dto.setId(id);
+        Entity entity = service().update(dto);
+        return mapper().toDto(entity);
     }
 
     @DeleteMapping("/{id}")
-    public void remove(@PathVariable IdentifierType id) {
-        service.remove(id);
+    public void remove(@PathVariable ID id) {
+        service().remove(id);
     }
 }

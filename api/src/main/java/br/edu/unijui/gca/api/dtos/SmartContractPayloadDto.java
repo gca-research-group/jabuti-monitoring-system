@@ -1,5 +1,7 @@
 package br.edu.unijui.gca.api.dtos;
 
+import br.edu.unijui.gca.api.dtos.blockchain.BlockchainDto;
+import br.edu.unijui.gca.api.dtos.smartcontract.SmartContractDto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;

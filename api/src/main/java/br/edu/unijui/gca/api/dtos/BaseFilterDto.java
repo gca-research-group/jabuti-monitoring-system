@@ -1,5 +1,7 @@
-package br.edu.unijui.gca.api.dtos.filter;
+package br.edu.unijui.gca.api.dtos;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,8 +13,13 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 public abstract class BaseFilterDto {
-    private int page;
-    private int pageSize;
+    @Min(1)
+    private int page = 1;
+
+    @Min(1)
+    @Max(100)
+    private int pageSize = 20;
+
     private String orderBy;
     private String orderDirection;
 }

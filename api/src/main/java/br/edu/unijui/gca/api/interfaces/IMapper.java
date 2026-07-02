@@ -2,8 +2,8 @@ package br.edu.unijui.gca.api.interfaces;
 
 import org.mapstruct.MappingTarget;
 
-public interface IMapper<Entity, Dto> {
-    Entity toEntity(Dto dto);
-    void updateEntity( Dto dto, @MappingTarget Entity entity);
-    Dto toDto(Entity entity);
+public interface IMapper<Entity, EntityDto> {
+    Entity toEntity(EntityDto dto);
+    void updateEntity(EntityDto dto, @MappingTarget Entity entity);
+    EntityDto toDto(Entity entity);
 }

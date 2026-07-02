@@ -3,13 +3,13 @@ package br.edu.unijui.gca.api.services;
 import br.edu.unijui.gca.api.entities.User;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+@RequiredArgsConstructor
 @Service
 public class RefreshTokenService {
-    @Autowired
-    private JwtService jwtService;
+    private final JwtService jwtService;
 
     private Cookie createCookie(String jrt) {
         Cookie cookie = new Cookie("jrt", jrt);

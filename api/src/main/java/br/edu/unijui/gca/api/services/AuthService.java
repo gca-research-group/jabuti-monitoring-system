@@ -5,24 +5,20 @@ import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.ExpiredTokenException;
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
 import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
-import br.edu.unijui.gca.api.exceptions.UserNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+@RequiredArgsConstructor
 @Service
 public class AuthService {
-    @Autowired
-    private PasswordService passwordService;
+    private final PasswordService passwordService;
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
 
-    @Autowired
-    private JwtService jwtService;
+    private final JwtService jwtService;
 
-    @Autowired
-    private RefreshTokenService refreshTokenService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthResponseDto authenticate(String email, String password, HttpServletResponse response) {
         User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
@@ -33,12 +29,7 @@ public class AuthService {
 
         String accessToken = jwtService.generateAccessToken(user);
 
-        return AuthResponseDto.builder()
-                .id(user.getId())
-                .name(user.getName())
-                .email(user.getEmail())
-                .accessToken(accessToken)
-                .build();
+        return AuthResponseDto.from(user, accessToken);
     }
 
     public AuthResponseDto refresh(HttpServletResponse response, String token) {
@@ -46,19 +37,14 @@ public class AuthService {
             String email = jwtService.getSubject(token);
             User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
-            if(!jwtService.isTokenValid(token, user)) {
+            if(jwtService.isTokenInvalid(token, user)) {
                 throw new InvalidTokenException();
             }
 
             refreshTokenService.setRefreshToken(response, user);
             String accessToken = jwtService.generateAccessToken(user);
 
-            return AuthResponseDto.builder()
-                    .id(user.getId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .accessToken(accessToken)
-                    .build();
+            return AuthResponseDto.from(user, accessToken);
         } catch (ExpiredTokenException e) {
             refreshTokenService.removeRefreshToken(response);
             throw e;

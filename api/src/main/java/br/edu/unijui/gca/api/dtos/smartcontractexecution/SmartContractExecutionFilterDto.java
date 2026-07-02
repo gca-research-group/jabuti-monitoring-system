@@ -1,6 +1,6 @@
-package br.edu.unijui.gca.api.dtos;
+package br.edu.unijui.gca.api.dtos.smartcontractexecution;
 
-import br.edu.unijui.gca.api.dtos.filter.BaseFilterDto;
+import br.edu.unijui.gca.api.dtos.BaseFilterDto;
 import lombok.Getter;
 import lombok.Setter;
 

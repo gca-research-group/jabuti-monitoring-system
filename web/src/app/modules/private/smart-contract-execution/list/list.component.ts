@@ -1,7 +1,6 @@
 import { TranslateModule } from '@ngx-translate/core';
 import { interval, Subscription, tap } from 'rxjs';
 
-import { NgStyle } from '@angular/common';
 import { Component, inject, OnDestroy, TemplateRef, viewChild } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -14,11 +13,11 @@ import { SmartContractExecutionResultDialogComponent } from '@app/components/sma
 import { SmartContractExecutionStatusSelectorComponent } from '@app/components/smart-contract-execution-status-selector';
 import { TableComponent } from '@app/components/table';
 import { BaseListDirective } from '@app/directives/base';
-import { Column, ColumnType, CrudService, SmartContractExecution } from '@app/models';
-import { StatusColorPipe } from '@app/pipes';
+import { Column, ColumnType, SmartContractExecution } from '@app/models';
 import { SmartContractExecutionService } from '@app/services/smart-contract-execution';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 import { ExpansionPanelComponent } from '@app/components/expansion-panel';
+import { IconStatusComponent } from "@app/components/icon-status";
 
 const COLUMNS: Column[] = [
   {
@@ -65,19 +64,15 @@ const COLUMNS: Column[] = [
     ReactiveFormsModule,
     FormsModule,
     RouterLink,
-    NgStyle,
-
     TranslateModule,
-
     BlockchainPlatformSelectorComponent,
     ExpansionPanelComponent,
     IconButtonComponent,
     InputComponent,
     SmartContractExecutionStatusSelectorComponent,
     TableComponent,
-
-    StatusColorPipe,
-  ],
+    IconStatusComponent
+],
   providers: [
     {
       provide: BREADCRUMB,
@@ -123,6 +118,39 @@ export class ListComponent
   private succeededRow = viewChild<TemplateRef<any>>('succeededRow');
 
   toggleAutoRefresh = false;
+
+  status: { id: boolean | string | number; label: string; color: string }[] = [
+    {
+      id: 'CONSUMED',
+      label: 'consumed',
+      color: '#64748B'
+    },
+    {
+      id: 'PUBLISHED',
+      label: 'published',
+      color: '#3B82F6'
+    },
+    {
+      id: 'PROCESSING',
+      label: 'processing',
+      color: '#F59E0B'
+    },
+    {
+      id: 'PROCESSED',
+      label: 'processed',
+      color: '#84CC16'
+    },
+    {
+      id: 'COMPLETE',
+      label: 'complete',
+      color: '#22C55E'
+    },
+    {
+      id: 'FAILED',
+      label: 'failed',
+      color: '#EF4444'
+    }
+  ]
 
   override ngOnDestroy(): void {
     super.ngOnDestroy();

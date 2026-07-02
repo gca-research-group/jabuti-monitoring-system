@@ -1,7 +1,9 @@
 package br.edu.unijui.gca.api.enums;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
+@RequiredArgsConstructor
 @Getter
 public enum OrderDirection {
 
@@ -9,10 +11,6 @@ public enum OrderDirection {
     DESC("desc");
 
     private final String description;
-
-    OrderDirection(String description) {
-        this.description = description;
-    }
 
     public static OrderDirection fromValue(String value) {
         for (OrderDirection direction : values()) {

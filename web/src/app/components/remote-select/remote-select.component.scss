@@ -1,0 +1,49 @@
+:host {
+  display: inline-block;
+  width: 100%;
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  ::ng-deep div.mat-mdc-select-panel {
+    padding-top: 0;
+  }
+}
+
+.remote-select-search {
+  align-items: center;
+  background: var(--mat-select-panel-background-color, var(--mat-sys-surface-container));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+
+  input {
+    border: 0;
+    flex: 1;
+    min-width: 0;
+    outline: 0;
+  }
+}
+
+.remote-select-state {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.remote-select-create {
+  border-radius: 0;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.remote-select-create-template {
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 12px;
+}

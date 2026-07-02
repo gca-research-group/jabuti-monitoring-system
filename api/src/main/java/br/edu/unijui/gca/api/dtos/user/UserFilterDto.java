@@ -1,5 +1,6 @@
-package br.edu.unijui.gca.api.dtos.filter;
+package br.edu.unijui.gca.api.dtos.user;
 
+import br.edu.unijui.gca.api.dtos.BaseFilterDto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,6 +10,7 @@ import lombok.experimental.SuperBuilder;
 @Setter
 @SuperBuilder
 @NoArgsConstructor
-public class SmartContractFilterDto extends BaseFilterDto {
+public class UserFilterDto extends BaseFilterDto {
     private String name;
+    private String email;
 }

@@ -1,5 +1,6 @@
-package br.edu.unijui.gca.api.dtos;
+package br.edu.unijui.gca.api.dtos.blockchain;
 
+import br.edu.unijui.gca.api.dtos.BaseDto;
 import br.edu.unijui.gca.api.enums.BlockchainPlatform;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
