@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="180120261044" author="Mailson Teles Borges">
+
+        <createTable tableName="api_keys">
+
+            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+
+            <column name="user_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="key_prefix" type="varchar(16)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="key_hash" type="char(64)">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="status" type="varchar(255)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+
+            <column name="remarks" type="text"/>
+
+            <column name="created_at"
+                    type="timestamp"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+
+            <column name="created_by_id" type="int"/>
+
+            <column name="updated_at"
+                    type="timestamp"
+                    defaultValueComputed="CURRENT_TIMESTAMP"/>
+
+            <column name="updated_by_id" type="int"/>
+
+        </createTable>
+
+        <addForeignKeyConstraint
+                baseTableName="api_keys"
+                baseColumnNames="user_id"
+                referencedTableName="users"
+                referencedColumnNames="id"
+                constraintName="fk_api_keys_users"/>
+
+        <createIndex
+                indexName="idx_api_keys_user_id"
+                tableName="api_keys">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex
+                indexName="idx_api_keys_prefix"
+                tableName="api_keys">
+            <column name="key_prefix"/>
+        </createIndex>
+
+        <createIndex
+                indexName="idx_api_keys_hash"
+                tableName="api_keys">
+            <column name="key_hash"/>
+        </createIndex>
+
+    </changeSet>
+
+</databaseChangeLog>

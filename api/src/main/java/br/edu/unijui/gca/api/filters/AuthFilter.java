@@ -1,18 +1,20 @@
 package br.edu.unijui.gca.api.filters;
 
+import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
 import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
 import br.edu.unijui.gca.api.exceptions.TokenNotFoundException;
+import br.edu.unijui.gca.api.services.ApiKeyService;
 import br.edu.unijui.gca.api.services.JwtService;
 import br.edu.unijui.gca.api.services.PasswordService;
 import br.edu.unijui.gca.api.services.UserService;
-import br.edu.unijui.gca.api.valueobjects.AuthToken;
-import br.edu.unijui.gca.api.valueobjects.BasicToken;
-import br.edu.unijui.gca.api.valueobjects.BearerToken;
+import br.edu.unijui.gca.api.token.ApiKeyToken;
+import br.edu.unijui.gca.api.token.BearerToken;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -20,7 +22,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 
+import java.util.Objects;
 
+
+@RequiredArgsConstructor
 @Component
 public class AuthFilter extends OncePerRequestFilter {
 
@@ -28,19 +33,11 @@ public class AuthFilter extends OncePerRequestFilter {
 
     private final PasswordService passwordService;
 
+    private final ApiKeyService apiKeyService;
+
     private final UserService userService;
 
     private final HandlerExceptionResolver handlerExceptionResolver;
-
-    public AuthFilter(JwtService jwtService,
-                      UserService userService,
-                      PasswordService passwordService,
-                      HandlerExceptionResolver handlerExceptionResolver) {
-        this.jwtService = jwtService;
-        this.passwordService = passwordService;
-        this.userService = userService;
-        this.handlerExceptionResolver = handlerExceptionResolver;
-    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -48,7 +45,9 @@ public class AuthFilter extends OncePerRequestFilter {
         var isImage = path.startsWith("/images/");
         var isAuth = path.contains("auth");
         var isFavicon = path.contains("favicon");
-        return isAuth || isImage || isFavicon;
+        var isActuator = path.contains("actuator");
+
+        return isAuth || isImage || isFavicon || isActuator;
     }
 
     @Override
@@ -58,24 +57,24 @@ public class AuthFilter extends OncePerRequestFilter {
             FilterChain filterChain
     )  {
         try {
-            String authorization = request.getHeader("Authorization");
+            String apiKey = request.getHeader("X-API-Key");
 
-            if (authorization == null) {
-                throw new TokenNotFoundException();
+            if (Objects.nonNull(apiKey)) {
+                authenticateApiKey(request, ApiKeyToken.from(apiKey));
             }
 
-            AuthToken authToken = AuthToken.from(authorization);
+            String authorization = request.getHeader("Authorization");
 
-            if (authToken instanceof BearerToken bearerToken) {
+            if (Objects.nonNull(authorization)) {
+                BearerToken bearerToken = BearerToken.from(authorization);
                 authenticateBearer(request, bearerToken);
             }
 
-            if (authToken instanceof BasicToken basicToken) {
-                authenticateBasic(request, basicToken);
+            if (Objects.isNull(apiKey) && Objects.isNull(authorization)) {
+                throw new TokenNotFoundException();
             }
 
             filterChain.doFilter(request, response);
-
         } catch (Exception e) {
             handlerExceptionResolver.resolveException(request, response, null, e);
         }
@@ -96,14 +95,12 @@ public class AuthFilter extends OncePerRequestFilter {
         setAuthentication(request, user);
     }
 
-    private void authenticateBasic(
+    private void authenticateApiKey(
             HttpServletRequest request,
-            BasicToken token
-    ) {
-        User user = userService.findByEmail(token.email()).orElseThrow(ResourceNotFoundException::new);
-
-        passwordService.validatePassword(token.password(), user.getPassword());
-
+            ApiKeyToken token) {
+        ApiKey apiKey = apiKeyService.findByKeyPrefix(token.prefix()).orElseThrow(ResourceNotFoundException::new);
+        apiKeyService.validateApiKey(token.secret(), apiKey);
+        User user = userService.findById(apiKey.getUser().getId());
         setAuthentication(request, user);
     }
 

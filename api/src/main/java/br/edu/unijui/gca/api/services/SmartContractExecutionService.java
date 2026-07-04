@@ -12,6 +12,7 @@ import br.edu.unijui.gca.api.repositories.SmartContractExecutionRepository;
 import br.edu.unijui.gca.api.specifications.SmartContractExecutionSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -54,6 +55,7 @@ public class SmartContractExecutionService extends BaseService<
         repository.deleteAllInBatch();
     }
 
+    @Async
     public void execute(SmartContractQueueInboundEventDto event) {
         var timestamps = new HashMap<SmartContractExecutionEvent, String>();
         timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());

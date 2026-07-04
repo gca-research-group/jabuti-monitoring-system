@@ -7,6 +7,7 @@ import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.services.SmartContractExecutionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -40,7 +41,8 @@ public class SmartContractExecutionResource extends BaseResource<
     }
 
     @PostMapping("/execute")
-    public void execute(@RequestBody SmartContractQueueInboundEventDto dto) {
+    public ResponseEntity<Void> execute(@RequestBody SmartContractQueueInboundEventDto dto) {
         this.service.execute(dto);
+        return ResponseEntity.accepted().build();
     }
 }

@@ -63,3 +63,27 @@ logging:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+  endpoint:
+    health:
+      show-details: always
+
+  metrics:
+    tags:
+      application: api
+
+server:
+  tomcat:
+    threads:
+      max: 800
+      min-spare: 100
+      accept-count: 1000
+      max-connections: 8192
+    mbeanregistry:
+      enabled: true

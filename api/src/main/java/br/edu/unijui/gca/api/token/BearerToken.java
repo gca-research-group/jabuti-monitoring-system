@@ -1,8 +1,8 @@
-package br.edu.unijui.gca.api.valueobjects;
+package br.edu.unijui.gca.api.token;
 
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
 
-public record BearerToken(String token) implements AuthToken {
+public record BearerToken(String token) {
 
     public BearerToken {
         if (token == null || token.isBlank()) {
