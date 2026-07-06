@@ -1,0 +1,9 @@
+{
+  "events": [1, 10, 15, 20, 25, 50],
+  "integrationProcesses": [2],
+  "consumers": [1, 10, 15, 20, 25, 50],
+  "lambda": 0.5, 
+  "duration": 300, 
+  "maxStartDelay": 50, 
+  "repetitions": 10 
+}
