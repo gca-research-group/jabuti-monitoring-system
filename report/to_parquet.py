@@ -5,6 +5,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from pathlib import Path
 
 load_dotenv()
 
@@ -18,11 +19,13 @@ engine = create_engine(
     pool_pre_ping=True,
 )
 
-OUTPUT_FILE = "data/data.parquet"
+METDATA = "data/202607061606/metadata.csv"
+OUTPUT_FILE = "data/202607061606/data/{}/{}.parquet"
 CHUNK_SIZE = 100_000
 
 schema = pa.schema([
-    ("id", pa.uuid()),
+    ("event_id", pa.uuid()),
+    ("scenario_id", pa.uuid()),
     ("status", pa.large_string()),
     ("consumers", pa.int64()),
     ("duration", pa.int64()),
@@ -43,13 +46,14 @@ schema = pa.schema([
     ("outbound_queue_processed", pa.timestamp("us", tz="UTC")),
 ])
 
-def export_to_parquet():
+def export_to_parquet(scenario_id: str, repetition: int):
     query = f"""
         SELECT
-            id,
+            id as event_id,
             status,
 
             -- Metadata
+            (metadata->>'ScenarioId')::uuid AS scenario_id,
             (metadata->>'Consumers')::int AS consumers,
             (metadata->>'Duration')::int AS duration,
             (metadata->>'Events')::int AS events,
@@ -73,11 +77,17 @@ def export_to_parquet():
             (timestamps->>'OUTBOUND_QUEUE_PROCESSED')::timestamptz AS outbound_queue_processed
         FROM
             smart_contract_executions
-        order by created_at asc;
+        WHERE
+            (metadata->>'ScenarioId')::uuid = '{scenario_id}' and (metadata->>'Repetition')::int = {repetition}
+        ORDER BY created_at ASC;
     """
 
     writer = None
     total_rows = 0
+
+    output = OUTPUT_FILE.format(scenario_id, repetition)
+    folder = Path(output)
+    folder.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         with engine.connect().execution_options(stream_results=True) as conn:
@@ -94,7 +104,7 @@ def export_to_parquet():
 
                 if writer is None:
                     writer = pq.ParquetWriter(
-                        OUTPUT_FILE,
+                        output,
                         table.schema,
                         compression="snappy",
                     )
@@ -113,5 +123,11 @@ def export_to_parquet():
     print(f"Finished. {total_rows:,} rows written to {OUTPUT_FILE}")
 
 
+def scenarios():
+    df = pd.read_csv(METDATA)
+    for row in df.itertuples(index=False):
+        export_to_parquet(row.ScenarioId, row.Repetition)
+
 if __name__ == "__main__":
-    export_to_parquet()
+    # export_to_parquet()
+    scenarios()
