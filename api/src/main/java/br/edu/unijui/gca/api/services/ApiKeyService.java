@@ -39,6 +39,7 @@ public class ApiKeyService {
         apiKey.setUser(user);
         apiKey.setKeyPrefix(prefix);
         apiKey.setKeyHash(hash);
+        apiKey.setStatus(true);
 
         repository.save(apiKey);
 

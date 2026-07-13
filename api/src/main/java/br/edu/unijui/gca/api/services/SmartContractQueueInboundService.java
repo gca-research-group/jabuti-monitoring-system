@@ -10,6 +10,7 @@ import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.exceptions.*;
 import br.edu.unijui.gca.api.mappers.BlockchainMapper;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
@@ -21,6 +22,9 @@ import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -44,11 +48,18 @@ public class SmartContractQueueInboundService {
 
     @RabbitListener(queues = {QueueNames.INBOUND_QUEUE})
     public void process(SmartContractQueueInboundEventDto event) {
+        OffsetDateTime consumedAt = OffsetDateTime.now(ZoneOffset.UTC);
+
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
 
+        Map<SmartContractExecutionEvent, String> timestamps = smartContractExecution.getTimestamps();
+
+        timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_CONSUMED, consumedAt.toString());
+        timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSING, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        smartContractExecution.setTimestamps(timestamps);
+        smartContractExecution.setStatus(SmartContractExecutionStatus.PROCESSING);
+
         try {
-            smartContractExecution.consumed(SmartContractExecutionEvent.INBOUND_QUEUE_CONSUMED);
-            smartContractExecution.processing(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSING);
             smartContractExecutionService.update(smartContractExecution);
 
             Blockchain blockchain;
@@ -99,7 +110,9 @@ public class SmartContractQueueInboundService {
 
             smartContractExecution.setPayload(payload);
 
-            smartContractExecution.processed(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED);
+            timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED, consumedAt.toString());
+            timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+            smartContractExecution.setTimestamps(timestamps);
             smartContractExecutionService.update(smartContractExecution);
 
             amqpTemplate.convertAndSend(
@@ -107,13 +120,12 @@ public class SmartContractQueueInboundService {
                     QueueNames.EXECUTION_ROUTING_KEY,
                     payload
             );
-
-            smartContractExecution.published(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED);
-            smartContractExecutionService.update(smartContractExecution);
         } catch (Exception exception) {
-            smartContractExecution.failed(exception);
-
-            smartContractExecution.processed(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED);
+            timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED, consumedAt.toString());
+            timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+            smartContractExecution.setTimestamps(timestamps);
+            smartContractExecution.setResult(exception.getMessage());
+            smartContractExecution.setStatus(SmartContractExecutionStatus.FAILED);
             smartContractExecutionService.update(smartContractExecution);
 
             amqpTemplate.convertAndSend(
@@ -121,9 +133,6 @@ public class SmartContractQueueInboundService {
                     QueueNames.OUTBOUND_ROUTING_KEY,
                     smartContractExecutionMapper.toDto(smartContractExecution)
             );
-
-            smartContractExecution.published(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED);
-            smartContractExecutionService.update(smartContractExecution);
 
             throw new AmqpRejectAndDontRequeueException(exception);
         }

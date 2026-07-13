@@ -46,6 +46,7 @@ public class SmartContractExecution {
     @Column(columnDefinition = "jsonb")
     private Map<SmartContractExecutionEvent, String> timestamps;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SmartContractExecutionStatus status;
 
@@ -59,33 +60,4 @@ public class SmartContractExecution {
     @LastModifiedDate
     @Column
     private Instant updatedAt;
-
-    public void published(SmartContractExecutionEvent key) {
-        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
-        status = SmartContractExecutionStatus.PUBLISHED;
-    }
-
-    public void consumed(SmartContractExecutionEvent key) {
-        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
-        status = SmartContractExecutionStatus.CONSUMED;
-    }
-
-    public void processing(SmartContractExecutionEvent key) {
-        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
-        status = SmartContractExecutionStatus.PROCESSING;
-    }
-
-    public void processed(SmartContractExecutionEvent key) {
-        timestamps.put(key, OffsetDateTime.now(ZoneOffset.UTC).toString());
-        status = SmartContractExecutionStatus.PROCESSED;
-    }
-
-    public void failed(Throwable error) {
-        status = SmartContractExecutionStatus.FAILED;
-        result = error.getMessage();
-    }
-
-    public void complete() {
-        status = SmartContractExecutionStatus.COMPLETE;
-    }
 }

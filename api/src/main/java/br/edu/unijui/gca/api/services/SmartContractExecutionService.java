@@ -5,8 +5,8 @@ import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionDto;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
-import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.repositories.SmartContractExecutionRepository;
 import br.edu.unijui.gca.api.specifications.SmartContractExecutionSpecification;
@@ -61,7 +61,7 @@ public class SmartContractExecutionService extends BaseService<
         timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
 
         SmartContractExecutionDto smartContractExecutionDto = SmartContractExecutionDto.builder()
-                .status(SmartContractExecutionStatus.PUBLISHED)
+                .status(SmartContractExecutionStatus.PENDING)
                 .metadata(event.getMetadata())
                 .timestamps(timestamps)
                 .build();

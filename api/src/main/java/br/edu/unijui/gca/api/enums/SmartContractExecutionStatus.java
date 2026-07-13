@@ -1,10 +1,13 @@
 package br.edu.unijui.gca.api.enums;
 
+import lombok.RequiredArgsConstructor;
+
+@RequiredArgsConstructor
 public enum SmartContractExecutionStatus {
-    CONSUMED,
-    PUBLISHED,
-    PROCESSING,
-    PROCESSED,
-    COMPLETE,
-    FAILED
+    PENDING("PENDING"),
+    PROCESSING("PROCESSING"),
+    PROCESSED("PROCESSED"),
+    FAILED("FAILED");
+
+    private final String name;
 }

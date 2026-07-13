@@ -9,6 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Map;
+
 @RequiredArgsConstructor
 @Slf4j
 @Component
@@ -20,11 +24,11 @@ public class SmartContractQueueOutboundService {
     public void process(SmartContractExecutionDto event) {
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
 
-        smartContractExecution.consumed(SmartContractExecutionEvent.OUTBOUND_QUEUE_CONSUMED);
-        smartContractExecution.processing(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSING);
-        smartContractExecution.processed(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSED);
+        Map<SmartContractExecutionEvent, String> timestamps = smartContractExecution.getTimestamps();
 
-        smartContractExecution.complete();
+        timestamps.put(SmartContractExecutionEvent.OUTBOUND_QUEUE_CONSUMED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        timestamps.put(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSING, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        timestamps.put(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSED, OffsetDateTime.now(ZoneOffset.UTC).toString());
 
         smartContractExecutionService.update(smartContractExecution);
     }
