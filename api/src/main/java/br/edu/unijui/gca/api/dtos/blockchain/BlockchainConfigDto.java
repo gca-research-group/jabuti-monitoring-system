@@ -1,4 +1,4 @@
-package br.edu.unijui.gca.api.dtos;
+package br.edu.unijui.gca.api.dtos.blockchain;
 
 import lombok.Builder;
 import lombok.Getter;

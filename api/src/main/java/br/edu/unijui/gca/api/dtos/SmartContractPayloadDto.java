@@ -1,7 +1,5 @@
 package br.edu.unijui.gca.api.dtos;
 
-import br.edu.unijui.gca.api.dtos.blockchain.BlockchainDto;
-import br.edu.unijui.gca.api.dtos.smartcontract.SmartContractDto;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -16,8 +14,8 @@ import java.util.UUID;
 @SuperBuilder
 public class SmartContractPayloadDto {
     private UUID id;
-    private BlockchainDto blockchain;
-    private SmartContractDto smartContract;
+    private UUID blockchainId;
+    private UUID smartContractId;
     private String clauseName;
     private List<SmartContractClauseArgumentDto> clauseArguments;
 }

@@ -11,10 +11,10 @@ import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
-import br.edu.unijui.gca.api.exceptions.*;
-import br.edu.unijui.gca.api.mappers.BlockchainMapper;
+import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
+import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseArgumentException;
+import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseException;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
-import br.edu.unijui.gca.api.mappers.SmartContractMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
@@ -34,13 +34,9 @@ import java.util.stream.Collectors;
 public class SmartContractQueueInboundService {
     private final SmartContractService smartContractService;
 
-    private final SmartContractExecutionService smartContractExecutionService;
-
     private final BlockchainService blockchainService;
 
-    private final BlockchainMapper blockchainMapper;
-
-    private final SmartContractMapper smartContractMapper;
+    private final SmartContractExecutionService smartContractExecutionService;
 
     private final SmartContractExecutionMapper smartContractExecutionMapper;
 
@@ -62,21 +58,9 @@ public class SmartContractQueueInboundService {
         try {
             smartContractExecutionService.update(smartContractExecution);
 
-            Blockchain blockchain;
+            Blockchain blockchain = blockchainService.findById(event.getBlockchainId());
 
-            try {
-                blockchain = blockchainService.findById(event.getBlockchainId());
-            } catch (ResourceNotFoundException e) {
-                throw new BlockchainNotFoundException();
-            }
-
-            SmartContract smartContract;
-
-            try {
-                smartContract = smartContractService.findById(event.getSmartContractId());
-            } catch (ResourceNotFoundException e) {
-                throw new SmartContractNotFoundException();
-            }
+            SmartContract smartContract  = smartContractService.findById(event.getSmartContractId());
 
             if (blockchain.getPlatform() != smartContract.getBlockchainPlatform()) {
                 throw new InvalidBlockchainPlatformException();
@@ -102,8 +86,8 @@ public class SmartContractQueueInboundService {
             var payload = SmartContractPayloadDto
                     .builder()
                     .id(smartContractExecution.getId())
-                    .blockchain(blockchainMapper.toDto(blockchain))
-                    .smartContract(smartContractMapper.toDto(smartContract))
+                    .blockchainId(blockchain.getId())
+                    .smartContractId(smartContract.getId())
                     .clauseName(event.getClauseName())
                     .clauseArguments(event.getClauseArguments())
                     .build();

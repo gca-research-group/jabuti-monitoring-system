@@ -75,6 +75,45 @@
               </div>
             }
           </div>
+
+          <div formArrayName="postExecutionActions" class="d-flex flex-wrap gap-4">
+            <legend
+              class="d-flex justify-content-between align-items-center w-100 mb-1"
+            >
+              <span>{{ 'post-execution-actions' | translate }}</span>
+              <app-icon-button
+                icon="add_circle"
+                (click)="addPostExecutionAction(clauseIndex)"
+                tooltip="add"
+              />
+            </legend>
+
+            @for (
+              postExecutionAction of $any(item.get('postExecutionActions')).controls;
+              track postExecutionAction;
+              let postExecutionActionIndex = $index
+            ) {
+              <div
+                class="col d-flex align-items-center gap-1"
+                [formGroupName]="postExecutionActionIndex"
+              >
+
+                <app-post-execution-action-type-selector formControlName="type" class="col" />
+
+                <app-input
+                  label="url"
+                  formControlName="url"
+                  class="col"
+                />
+
+                <app-icon-button
+                  icon="delete"
+                  (click)="removePostExecutionAction(clauseIndex, postExecutionActionIndex)"
+                  tooltip="delete"
+                />
+              </div>
+            }
+          </div>
         </mat-expansion-panel>
       </div>
     }

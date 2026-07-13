@@ -42,7 +42,7 @@ public abstract class BaseService<
     }
 
     public Entity update(EntityDto dto) {
-        Entity entity = repository().findById(dto.getId()).orElseThrow(ResourceNotFoundException::new);
+        Entity entity = findById(dto.getId());
         mapper().updateEntity(dto, entity);
         return update(entity);
     }

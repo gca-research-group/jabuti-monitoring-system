@@ -21,6 +21,7 @@ import { BaseFormDirective } from '@app/directives/base';
 import { SmartContract } from '@app/models';
 import { SmartContractService } from '@app/services/smart-contract';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
+import { PostExecutionActionSelectorComponent } from '@app/components/post-execution-action-type-selector';
 
 @Component({
   selector: 'app-smart-contract-form',
@@ -34,6 +35,7 @@ import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
     InputComponent,
     ButtonComponent,
     IconButtonComponent,
+    PostExecutionActionSelectorComponent,
     BlockchainPlatformSelectorComponent,
 
     MatExpansionModule,
@@ -95,6 +97,10 @@ export class FormComponent extends BaseFormDirective<
           for (const _ of clause.clauseArguments ?? []) {
             this.addClauseArgument(index);
           }
+
+          for (const _ of clause.postExecutionActions ?? []) {
+            this.addPostExecutionAction(index);
+          }
         }
 
         super.patchValue({
@@ -107,6 +113,7 @@ export class FormComponent extends BaseFormDirective<
       this.formBuilder.group({
         name: [null, [Validators.required]],
         clauseArguments: this.formBuilder.array([]),
+        postExecutionActions: this.formBuilder.array([]),
       }),
     );
 
@@ -124,6 +131,19 @@ export class FormComponent extends BaseFormDirective<
     _clauseArguments.push(
       this.formBuilder.group({
         name: [null, [Validators.required]],
+      }),
+    );
+  }
+
+  addPostExecutionAction(index: number) {
+    const _postExecutionActions = this.clauses
+      .at(index)
+      .get('postExecutionActions') as FormArray;
+
+    _postExecutionActions.push(
+      this.formBuilder.group({
+        url: [null, [Validators.required]],
+        type: [null, [Validators.required]],
       }),
     );
   }
@@ -181,5 +201,35 @@ export class FormComponent extends BaseFormDirective<
     }
 
     _clauseArguments.removeAt(argumentIndex);
+  }
+
+  removePostExecutionAction(clauseIndex: number, argumentIndex: number) {
+    const _postExecutionActions = this.clauses
+      .at(clauseIndex)
+      .get('postExecutionActions') as FormArray<
+      FormGroup<{
+        name: FormControl<string | null>;
+      }>
+    >;
+
+    const _postExecutionAction = _postExecutionActions.at(argumentIndex);
+
+    if (
+      !!_postExecutionAction.get('name')?.value
+    ) {
+      const dialogRef = this.dialog.open(DeleteDialogComponent, {
+        data: true,
+      });
+
+      dialogRef.afterClosed().subscribe((value: boolean) => {
+        if (value) {
+          _postExecutionActions.removeAt(argumentIndex);
+        }
+      });
+
+      return;
+    }
+
+    _postExecutionActions.removeAt(argumentIndex);
   }
 }

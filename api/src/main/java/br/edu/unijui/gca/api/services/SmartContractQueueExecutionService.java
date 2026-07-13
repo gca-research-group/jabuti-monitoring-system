@@ -2,6 +2,8 @@ package br.edu.unijui.gca.api.services;
 
 import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
+import br.edu.unijui.gca.api.entities.Blockchain;
+import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
@@ -30,6 +32,10 @@ public class SmartContractQueueExecutionService {
 
     private final SmartContractExecutionMapper smartContractExecutionMapper;
 
+    private final SmartContractService smartContractService;
+
+    private final BlockchainService blockchainService;
+
     private final ObjectMapper objectMapper;
 
     private final AmqpTemplate amqpTemplate;
@@ -45,16 +51,22 @@ public class SmartContractQueueExecutionService {
             timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PROCESSING, OffsetDateTime.now(ZoneOffset.UTC).toString());
             smartContractExecutionService.update(smartContractExecution);
 
-            var parameters = objectMapper.convertValue(payload.getBlockchain().getParameters(),
-                    blockchainConnectionFactory.getConfigType(payload.getBlockchain().getPlatform()));
+            Blockchain blockchain = blockchainService.findById(payload.getBlockchainId());
 
-            var service = blockchainConnectionFactory.getInstance(payload.getBlockchain().getPlatform());
+            var parameters = objectMapper.convertValue(blockchain.getParameters(),
+                    blockchainConnectionFactory.getConfigType(blockchain.getPlatform()));
 
-            var connection = service.getConnection(payload.getBlockchain().getId().toString(), parameters);
+            var service = blockchainConnectionFactory.getInstance(blockchain.getPlatform());
+
+            var connectionId = blockchain.getId().toString() + "_" + blockchain.getUpdatedAt().toEpochMilli();
+
+            var connection = service.getConnection(connectionId, parameters);
+
+            SmartContract smartContract  = smartContractService.findById(payload.getSmartContractId());
 
             String result = service.invoke(connection,
                     parameters,
-                    payload.getSmartContract().getName(),
+                    smartContract.getName(),
                     payload.getClauseName(),
                     payload.getClauseArguments());
 

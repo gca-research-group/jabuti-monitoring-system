@@ -1,5 +1,6 @@
 package br.edu.unijui.gca.api.dtos;
 
+import br.edu.unijui.gca.api.enums.PostExecutionActionType;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,18 +8,23 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
-import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SmartContractClauseDto {
+public class PostExecutionActionDto {
+
     @NotNull
-    private String name;
+    private PostExecutionActionType type;
 
-    private List<SmartContractClauseArgumentDto> clauseArguments;
+    private String url;
 
-    private List<PostExecutionActionDto> postExecutionActions;
+    private UUID blockchainId;
+
+    private UUID smartContractId;
+
+    private String clauseName;
 }
