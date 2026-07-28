@@ -26,8 +26,8 @@ func SaveScenariosToCSV(scenarios []runner.Scenario, filename string) error {
 
 	for _, scenario := range scenarios {
 		row := []string{
-			scenario.ExecutionId,
-			scenario.ScenarioId,
+			scenario.ExecutionID,
+			scenario.ScenarioID,
 			strconv.Itoa(scenario.Events),
 			fmt.Sprintf("%f", scenario.Lambda),
 			strconv.Itoa(scenario.Duration),
