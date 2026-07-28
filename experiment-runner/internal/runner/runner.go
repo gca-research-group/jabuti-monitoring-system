@@ -93,7 +93,7 @@ func GenerateExponentialEvents(n int, lambda float64) []time.Duration {
 	return events
 }
 
-func DispatchEvent(client *api.Client, env *config.Env, wg *sync.WaitGroup, interval time.Duration, accessToken string, scenario Scenario) {
+func DispatchEvent(client *api.Client, env *config.Env, wg *sync.WaitGroup, interval time.Duration, token string, scenario Scenario) {
 	defer wg.Done()
 
 	time.Sleep(interval)
@@ -121,12 +121,12 @@ func DispatchEvent(client *api.Client, env *config.Env, wg *sync.WaitGroup, inte
 		},
 	}
 
-	if err := client.ExecuteSmartContract(accessToken, message); err != nil {
+	if err := client.ExecuteSmartContract(token, message); err != nil {
 		log.Printf("failed to execute smart contract: %v", err)
 	}
 }
 
-func RunParallelScenario(wg *sync.WaitGroup, client *api.Client, env *config.Env, scenario Scenario, accessToken string, integrationProcess int) {
+func RunParallelScenario(wg *sync.WaitGroup, client *api.Client, env *config.Env, scenario Scenario, token string, integrationProcess int) {
 	defer wg.Done()
 
 	randomDelay := time.Duration(rand.Intn(scenario.MaxStartDelay+1)) * time.Second
@@ -134,11 +134,11 @@ func RunParallelScenario(wg *sync.WaitGroup, client *api.Client, env *config.Env
 	time.Sleep(randomDelay)
 
 	fmt.Printf("starting integration process %d for scenario %s at %v\n", integrationProcess, scenario.ScenarioId, time.Now())
-	RunScenario(client, env, scenario, accessToken)
+	RunScenario(client, env, scenario, token)
 	fmt.Printf("completed integration process %d for scenario %s at %v\n", integrationProcess, scenario.ScenarioId, time.Now())
 }
 
-func RunScenario(client *api.Client, env *config.Env, scenario Scenario, accessToken string) {
+func RunScenario(client *api.Client, env *config.Env, scenario Scenario, token string) {
 	var wg sync.WaitGroup
 
 	events := make(map[int][]time.Duration)
@@ -152,7 +152,7 @@ func RunScenario(client *api.Client, env *config.Env, scenario Scenario, accessT
 
 		for _, interval := range events[i] {
 			wg.Add(1)
-			go DispatchEvent(client, env, &wg, interval, accessToken, scenario)
+			go DispatchEvent(client, env, &wg, interval, token, scenario)
 		}
 
 		time.Sleep(1 * time.Second)

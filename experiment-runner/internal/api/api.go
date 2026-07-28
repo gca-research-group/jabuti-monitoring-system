@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 )
 
@@ -13,8 +15,6 @@ type ClauseArgument struct {
 }
 
 type SmartContractMessage struct {
-	ExecutionId     string           `json:"executionId"`
-	GroupId         string           `json:"groupId"`
 	BlockchainID    string           `json:"blockchainId"`
 	SmartContractID string           `json:"smartContractId"`
 	ClauseName      string           `json:"clauseName"`
@@ -49,7 +49,7 @@ func (c *Client) StartProcessing(token string) error {
 		return fmt.Errorf("failed to create start benchmark request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to start benchmark: %v", err)
@@ -65,7 +65,7 @@ func (c *Client) StopProcessing(token string) error {
 		return fmt.Errorf("failed to create stop benchmark request: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to stop benchmark: %v", err)
@@ -81,7 +81,7 @@ func (c *Client) PurgeNotProcessedEvents(token string) error {
 		return fmt.Errorf("failed to purge queues: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to purge queues: %v", err)
@@ -97,7 +97,7 @@ func (c *Client) SetUpConsumers(token string, quantity int) error {
 		return fmt.Errorf("failed to set up consumers: %v", err)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to set up consumers: %v", err)
@@ -108,24 +108,37 @@ func (c *Client) SetUpConsumers(token string, quantity int) error {
 }
 
 func (c *Client) ExecuteSmartContract(token string, message SmartContractMessage) error {
+	endpoint := fmt.Sprintf("%s/smart-contract-execution/execute", c.BaseURL)
+
 	body, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("failed to marshal message: %v", err)
+		log.Printf("[ExecuteSmartContract] failed to marshal message: %v", err)
+		return fmt.Errorf("marshal message: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/smart-contract-execution/execute", c.BaseURL), bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
+
 	if err != nil {
-		return fmt.Errorf("failed to create execute request: %v", err)
+		log.Printf("[ExecuteSmartContract] failed to create request: %v", err)
+		return fmt.Errorf("create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Basic %s", token))
+	req.Header.Set("X-API-Key", token)
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to execute smart contract: %v", err)
+		log.Printf("[ExecuteSmartContract] request failed: %v", err)
+		return fmt.Errorf("execute smart contract request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		log.Printf("[ExecuteSmartContract] non-success response status=%d body=%s", resp.StatusCode, string(bodyBytes))
+
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
 
 	return nil
 }

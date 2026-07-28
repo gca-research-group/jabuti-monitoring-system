@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"log"
 	"sync"
@@ -16,7 +15,7 @@ import (
 func main() {
 	env := config.LoadEnv()
 	client := api.NewClient(env.BaseURL)
-	token := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", env.AdminEmail, env.AdminPassword)))
+	token := env.ApiKey
 	parameters, err := config.LoadParameters()
 
 	if err != nil {
@@ -34,22 +33,20 @@ func main() {
 	var wg sync.WaitGroup
 
 	for index, scenario := range scenarios {
-		if err := client.PurgeNotProcessedEvents(token); err != nil {
-			log.Printf("failed to purge not processed events for execution %d: %v", index, err)
-			return
-		}
+
+		runner.HyperledgerFabric()
+		runner.RabbitMQ()
+		runner.Postgres()
+		time.Sleep(20 * time.Second)
+		runner.Api()
+		time.Sleep(30 * time.Second)
 
 		if err := client.SetUpConsumers(token, scenario.Consumers); err != nil {
 			log.Printf("failed to set up consumers for execution %d: %v", index, err)
 			return
 		}
 
-		if err := client.StartProcessing(token); err != nil {
-			log.Printf("failed to start benchmark for execution %d: %v", index, err)
-			return
-		}
-
-		time.Sleep(30 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		for i := 0; i < scenario.IntegrationProcesses; i++ {
 			wg.Add(1)
@@ -63,10 +60,10 @@ func main() {
 			log.Printf("failed to stop benchmark for execution %d: %v", index, err)
 			return
 		}
+	}
 
-		if err := client.PurgeNotProcessedEvents(token); err != nil {
-			log.Printf("failed to purge benchmark for execution %d: %v", index, err)
-			return
-		}
+	if err := client.StartProcessing(token); err != nil {
+		log.Printf("failed to start queues %v", err)
+		return
 	}
 }

@@ -9,9 +9,10 @@ import (
 )
 
 type Env struct {
-	BaseURL         string
-	AdminEmail      string
-	AdminPassword   string
+	BaseURL string
+	//AdminEmail      string
+	//AdminPassword   string
+	ApiKey          string
 	BlockchainID    string
 	SmartContractID string
 }
@@ -31,8 +32,7 @@ func LoadEnv() *Env {
 
 	return &Env{
 		BaseURL:         getEnv("API_BASE_URL", "http://localhost:8080"),
-		AdminEmail:      getEnv("ADMIN_EMAIL", "admin@admin.com"),
-		AdminPassword:   getEnv("ADMIN_PASSWORD", "admin"),
+		ApiKey:          getEnv("API_KEY", ""),
 		BlockchainID:    getEnv("BLOCKCHAIN_ID", ""),
 		SmartContractID: getEnv("SMART_CONTRACT_ID", ""),
 	}
