@@ -2,6 +2,26 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'postgres_exporter'
+  - job_name: api_spring
+    metrics_path: /api/actuator/prometheus
     static_configs:
-      - targets: ['jms_postgres_exporter:9187']
+      - targets:
+          - 200.17.87.137
+
+  - job_name: api_server
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 200.17.87.137:9100
+
+  - job_name: api_nginx
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 200.17.87.137:9113
+
+  - job_name: database_postgres
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - 200.17.87.134:9187

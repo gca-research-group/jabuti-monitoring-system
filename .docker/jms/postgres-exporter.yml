@@ -1,0 +1,10 @@
+services:
+  postgres_exporter:
+      image: quay.io/prometheuscommunity/postgres-exporter:latest
+      container_name: gca_postgres_exporter
+      env_file: ./envs/.env.postgres-exporter
+      ports:
+        - "9187:9187"
+      networks:
+        - gca_network
+      restart: unless-stopped

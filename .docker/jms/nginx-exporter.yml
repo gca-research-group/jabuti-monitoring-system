@@ -1,0 +1,7 @@
+services:
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter
+    command:
+      - -nginx.scrape-uri=http://200.17.87.137/status
+    ports:
+      - "9113:9113"
