@@ -7,7 +7,6 @@ import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
 import br.edu.unijui.gca.api.exceptions.TokenNotFoundException;
 import br.edu.unijui.gca.api.services.ApiKeyService;
 import br.edu.unijui.gca.api.services.JwtService;
-import br.edu.unijui.gca.api.services.PasswordService;
 import br.edu.unijui.gca.api.services.UserService;
 import br.edu.unijui.gca.api.token.ApiKeyToken;
 import br.edu.unijui.gca.api.token.BearerToken;
@@ -30,8 +29,6 @@ import java.util.Objects;
 public class AuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
-
-    private final PasswordService passwordService;
 
     private final ApiKeyService apiKeyService;
 
