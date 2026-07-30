@@ -9,12 +9,13 @@ import (
 )
 
 type Env struct {
-	BaseURL string
-	//AdminEmail      string
-	//AdminPassword   string
-	ApiKey          string
-	BlockchainID    string
-	SmartContractID string
+	BaseURL              string
+	ApiKey               string
+	BlockchainID         string
+	SmartContractID      string
+	FabricCACertPath     string
+	FabricPrivateKeyPath string
+	FabricSignCertPath   string
 }
 
 type Parameters struct {
@@ -35,6 +36,18 @@ func LoadEnv() *Env {
 		ApiKey:          getEnv("API_KEY", ""),
 		BlockchainID:    getEnv("BLOCKCHAIN_ID", ""),
 		SmartContractID: getEnv("SMART_CONTRACT_ID", ""),
+		FabricCACertPath: getEnv(
+			"FABRIC_CA_CERT_PATH",
+			"/home/monitor/app/output/network-with-chaincode/org1.network-with-chaincode.com/data/certificate-authority/organizations/peerOrganizations/org1.network-with-chaincode.com/peers/peer0.org1.network-with-chaincode.com/tls/ca.crt",
+		),
+		FabricPrivateKeyPath: getEnv(
+			"FABRIC_PRIVATE_KEY_PATH",
+			"/home/monitor/app/output/network-with-chaincode/org1.network-with-chaincode.com/data/certificate-authority/organizations/peerOrganizations/org1.network-with-chaincode.com/users/User1@org1.network-with-chaincode.com/msp/keystore/priv_sk",
+		),
+		FabricSignCertPath: getEnv(
+			"FABRIC_SIGN_CERT_PATH",
+			"/home/monitor/app/output/network-with-chaincode/org1.network-with-chaincode.com/data/certificate-authority/organizations/peerOrganizations/org1.network-with-chaincode.com/users/User1@org1.network-with-chaincode.com/msp/signcerts/cert.pem",
+		),
 	}
 }
 

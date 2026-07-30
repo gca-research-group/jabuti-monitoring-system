@@ -46,6 +46,27 @@ func (c *SSHClient) Run(address string, commands ...string) error {
 	return nil
 }
 
+func (c *SSHClient) RunOutput(address, command string) ([]byte, error) {
+	client, err := c.connect(address)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	session, err := client.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("create SSH session: %w", err)
+	}
+	defer session.Close()
+
+	output, runErr := session.CombinedOutput(command)
+	if runErr != nil {
+		return output, fmt.Errorf("run %q: %w (output: %s)", command, runErr, output)
+	}
+
+	return output, nil
+}
+
 func (c *SSHClient) connect(address string) (*ssh.Client, error) {
 	privateKey, err := os.ReadFile(c.PrivateKeyPath)
 	if err != nil {

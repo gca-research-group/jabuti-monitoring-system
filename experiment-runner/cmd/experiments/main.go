@@ -35,7 +35,7 @@ func run() error {
 
 	suite := experiment.Suite{
 		Client:         client,
-		Infrastructure: infrastructure.NewResetManager(),
+		Infrastructure: infrastructure.NewResetManager(client, env),
 		Report:         experiment.CSVReport{},
 		Executor:       executor,
 		Token:          env.ApiKey,

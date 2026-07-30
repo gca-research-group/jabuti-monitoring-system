@@ -2,7 +2,11 @@ package infrastructure
 
 import (
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
 )
 
 const (
@@ -13,24 +17,40 @@ const (
 )
 
 type ResetManager struct {
-	SSH   CommandRunner
-	Sleep func(time.Duration)
+	SSH       CommandRunner
+	Registrar RegistrationClient
+	Env       *config.Env
+	Sleep     func(time.Duration)
 }
 
 type CommandRunner interface {
 	Run(address string, commands ...string) error
+	RunOutput(address, command string) ([]byte, error)
 }
 
-func NewResetManager() *ResetManager {
+type RegistrationClient interface {
+	RegisterBlockchain(token string, payload api.BlockchainRegistration) (string, error)
+	RegisterSmartContract(token string, payload api.SmartContractRegistration) (string, error)
+}
+
+func NewResetManager(registrar RegistrationClient, env *config.Env) *ResetManager {
 	return &ResetManager{
-		SSH:   NewSSHClient(),
-		Sleep: time.Sleep,
+		SSH:       NewSSHClient(),
+		Registrar: registrar,
+		Env:       env,
+		Sleep:     time.Sleep,
 	}
 }
 
 func (m *ResetManager) Reset() error {
 	if m.SSH == nil {
 		return fmt.Errorf("SSH command runner is required")
+	}
+	if m.Registrar == nil {
+		return fmt.Errorf("registration client is required")
+	}
+	if m.Env == nil {
+		return fmt.Errorf("environment configuration is required")
 	}
 	if m.Sleep == nil {
 		return fmt.Errorf("sleep function is required")
@@ -89,5 +109,87 @@ func (m *ResetManager) Reset() error {
 	}
 
 	m.Sleep(30 * time.Second)
+	return m.registerFabricResources()
+}
+
+func (m *ResetManager) registerFabricResources() error {
+	caCrt, err := m.readFabricFile("CA certificate", m.Env.FabricCACertPath)
+	if err != nil {
+		return err
+	}
+	privateKey, err := m.readFabricFile("private key", m.Env.FabricPrivateKeyPath)
+	if err != nil {
+		return err
+	}
+	signCert, err := m.readFabricFile("signing certificate", m.Env.FabricSignCertPath)
+	if err != nil {
+		return err
+	}
+
+	blockchainID, err := m.Registrar.RegisterBlockchain(m.Env.ApiKey, api.BlockchainRegistration{
+		Name:     "Hyperledger Fabric",
+		Platform: "HYPERLEDGER_FABRIC",
+		Parameters: api.BlockchainParameters{
+			MSPID:         "Org1MSP",
+			PeerEndpoint:  "200.17.87.154:7051",
+			PeerHostAlias: "peer0.org1.network-with-chaincode.com",
+			ChannelName:   "defaultchannel",
+			SignCert:      signCert,
+			KeyStore:      privateKey,
+			CACrt:         caCrt,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("register blockchain: %w", err)
+	}
+
+	smartContractID, err := m.Registrar.RegisterSmartContract(m.Env.ApiKey, productSmartContractRegistration())
+	if err != nil {
+		return fmt.Errorf("register smart contract: %w", err)
+	}
+
+	m.Env.BlockchainID = blockchainID
+	m.Env.SmartContractID = smartContractID
 	return nil
+}
+
+func (m *ResetManager) readFabricFile(name, path string) (string, error) {
+	if strings.TrimSpace(path) == "" {
+		return "", fmt.Errorf("read Fabric %s: path is required", name)
+	}
+
+	output, err := m.SSH.RunOutput(fabricAddress, "cat -- "+shellQuote(path))
+	if err != nil {
+		return "", fmt.Errorf("read Fabric %s: %w", name, err)
+	}
+	return string(output), nil
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+}
+
+func productSmartContractRegistration() api.SmartContractRegistration {
+	return api.SmartContractRegistration{
+		Name:               "Product",
+		BlockchainPlatform: "HYPERLEDGER_FABRIC",
+		Clauses: []api.SmartContractClause{
+			{
+				Name: "QueryProductByID",
+				ClauseArguments: []api.SmartContractClauseArgument{
+					{Name: "id"},
+				},
+			},
+			{
+				Name: "CreateProduct",
+				ClauseArguments: []api.SmartContractClauseArgument{
+					{Name: "id"},
+					{Name: "name"},
+					{Name: "description"},
+					{Name: "price"},
+				},
+			},
+		},
+		Status: true,
+	}
 }
