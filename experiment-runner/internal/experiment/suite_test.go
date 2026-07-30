@@ -44,20 +44,17 @@ func (f *fakeInfrastructure) Reset() error {
 }
 
 type fakeExecutor struct {
-	events  *[]string
-	summary runner.ExecutionSummary
+	events *[]string
 }
 
-func (f fakeExecutor) Run(runner.Scenario) runner.ExecutionSummary {
+func (f fakeExecutor) Run(runner.Scenario) {
 	*f.events = append(*f.events, "run")
-	return f.summary
 }
 
 type fakeExporter struct {
 	events      *[]string
 	validateErr error
 	exportErr   error
-	rowCount    int64
 	validations int
 }
 
@@ -65,9 +62,9 @@ func (f *fakeExporter) Validate(context.Context) error {
 	f.validations++
 	return f.validateErr
 }
-func (f *fakeExporter) Export(context.Context, runner.Scenario, string) (int64, error) {
+func (f *fakeExporter) Export(context.Context, runner.Scenario, string) error {
 	*f.events = append(*f.events, "export")
-	return f.rowCount, f.exportErr
+	return f.exportErr
 }
 
 type fakeResults struct {
@@ -125,7 +122,7 @@ func TestSuiteLogsExportFailureAndContinuesToFinalReset(t *testing.T) {
 	var events []string
 	exportErr := errors.New("write failed")
 	suite := validSuite(&events)
-	suite.Exporter = &fakeExporter{events: &events, exportErr: exportErr, rowCount: 7}
+	suite.Exporter = &fakeExporter{events: &events, exportErr: exportErr}
 
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
@@ -191,7 +188,7 @@ func TestSuiteSkipsCompletedRepetitionsIndividually(t *testing.T) {
 
 func TestSuiteAllCompletedSkipsDatabaseAndInfrastructure(t *testing.T) {
 	var events []string
-	exporter := &fakeExporter{events: &events, rowCount: 1}
+	exporter := &fakeExporter{events: &events}
 	registry := &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{
 		{Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: 1}: {},
 	}}
@@ -210,27 +207,22 @@ func TestSuiteAllCompletedSkipsDatabaseAndInfrastructure(t *testing.T) {
 	}
 }
 
-func TestSuiteRegistersOnlyCleanExactExport(t *testing.T) {
+func TestSuiteRegistersEverySuccessfulExport(t *testing.T) {
 	tests := []struct {
-		name         string
-		rowCount     int64
-		exportErr    error
-		failedEvents int
-		wantMarks    int
+		name      string
+		exportErr error
+		wantMarks int
 	}{
-		{name: "clean", rowCount: 1, wantMarks: 1},
-		{name: "count mismatch", rowCount: 0},
+		{name: "successful export", wantMarks: 1},
 		{name: "export failure", exportErr: errors.New("export failed")},
-		{name: "dispatch failure", rowCount: 1, failedEvents: 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var events []string
 			registry := &fakeRegistry{}
 			suite := validSuite(&events)
-			suite.Exporter = &fakeExporter{events: &events, rowCount: test.rowCount, exportErr: test.exportErr}
+			suite.Exporter = &fakeExporter{events: &events, exportErr: test.exportErr}
 			suite.Results = &fakeResults{events: &events}
-			suite.Executor = fakeExecutor{events: &events, summary: runner.ExecutionSummary{FailedEvents: test.failedEvents}}
 			suite.Registry = registry
 
 			if err := suite.Run(oneScenarioParameters()); err != nil {
@@ -274,18 +266,17 @@ func TestSuiteMalformedRegistryAbortsBeforeDatabaseAndReset(t *testing.T) {
 	}
 }
 
-func TestSuiteDoesNotRegisterExecutionFailures(t *testing.T) {
+func TestSuiteSuccessfulExportRegistersScenario(t *testing.T) {
 	var events []string
 	registry := &fakeRegistry{}
 	suite := validSuite(&events)
-	suite.Executor = fakeExecutor{events: &events, summary: runner.ExecutionSummary{FailedEvents: 3}}
 	suite.Registry = registry
 
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if len(registry.marks) != 0 {
-		t.Fatalf("registry marks = %d, want 0", len(registry.marks))
+	if len(registry.marks) != 1 {
+		t.Fatalf("registry marks = %d, want 1", len(registry.marks))
 	}
 }
 
@@ -294,7 +285,7 @@ func validSuite(events *[]string) Suite {
 		Client:         fakeAPI{events: events},
 		Infrastructure: &fakeInfrastructure{events: events},
 		Executor:       fakeExecutor{events: events},
-		Exporter:       &fakeExporter{events: events, rowCount: 1},
+		Exporter:       &fakeExporter{events: events},
 		Results:        &fakeResults{events: events},
 		Registry:       &fakeRegistry{},
 		Sleep:          func(time.Duration) {},

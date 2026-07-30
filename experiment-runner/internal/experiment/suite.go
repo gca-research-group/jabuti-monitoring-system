@@ -22,11 +22,11 @@ type Infrastructure interface {
 
 type ResultExporter interface {
 	Validate(ctx context.Context) error
-	Export(ctx context.Context, scenario runner.Scenario, destination string) (int64, error)
+	Export(ctx context.Context, scenario runner.Scenario, destination string) error
 }
 
 type ScenarioExecutor interface {
-	Run(scenario runner.Scenario) runner.ExecutionSummary
+	Run(scenario runner.Scenario)
 }
 
 type ExperimentResults interface {
@@ -95,17 +95,17 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		}
 
 		s.Sleep(10 * time.Second)
-		summary := s.Executor.Run(scenario)
+		s.Executor.Run(scenario)
 
 		if err := s.Client.StopProcessing(s.Token); err != nil {
 			return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
 		}
 
-		rowCount, exportErr := s.Exporter.Export(ctx, scenario, s.Results.Destination(scenario))
+		exportErr := s.Exporter.Export(ctx, scenario, s.Results.Destination(scenario))
 		if exportErr != nil {
 			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
 		}
-		if exportErr == nil && summary.FailedEvents == 0 && rowCount == expectedRows(scenario) {
+		if exportErr == nil {
 			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
 				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
 			}

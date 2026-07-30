@@ -103,9 +103,11 @@ output/experiments/
 
 `successful-scenarios.json` is the global completion registry. Before starting an
 experiment, the runner skips repetitions whose stable scenario metadata is already
-registered. A repetition is registered only after an exact-row-count Parquet export
-with no event dispatch failures. If all configured repetitions are registered, the
-runner exits without connecting to PostgreSQL or resetting infrastructure.
+registered. A repetition is registered after its Parquet export completes
+successfully. Event failures and incomplete result sets remain available for later
+analysis and do not affect runner control flow. If all configured repetitions are
+registered, the runner exits without connecting to PostgreSQL or resetting
+infrastructure.
 
 Use only one runner process for a given `EXPERIMENT_OUTPUT_DIR`. The global registry
 uses atomic updates but does not provide cross-process locking.

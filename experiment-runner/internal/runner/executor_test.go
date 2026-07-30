@@ -38,7 +38,7 @@ func TestExecutorCompletesWhenEventDispatchFails(t *testing.T) {
 	executor.Now = func() time.Time { return time.Unix(0, 0) }
 	executor.Logf = func(string, ...any) {}
 
-	summary := executor.Run(Scenario{
+	executor.Run(Scenario{
 		Events:               1,
 		Lambda:               0.5,
 		Duration:             1,
@@ -52,10 +52,6 @@ func TestExecutorCompletesWhenEventDispatchFails(t *testing.T) {
 	if calls != 1 {
 		t.Fatalf("dispatch calls = %d, want 1", calls)
 	}
-	if summary.FailedEvents != 1 {
-		t.Fatalf("failed events = %d, want 1", summary.FailedEvents)
-	}
-
 	sleepMu.Lock()
 	defer sleepMu.Unlock()
 	if len(sleeps) != 3 {

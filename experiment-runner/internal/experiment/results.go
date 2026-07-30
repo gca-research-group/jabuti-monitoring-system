@@ -39,7 +39,3 @@ func (d *Dataset) Destination(scenario runner.Scenario) string {
 		fmt.Sprintf("%04d.parquet", scenario.Repetition),
 	)
 }
-
-func expectedRows(scenario runner.Scenario) int64 {
-	return int64(scenario.Events) * int64(scenario.Duration) * int64(scenario.IntegrationProcesses)
-}

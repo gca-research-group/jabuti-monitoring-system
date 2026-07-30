@@ -48,16 +48,13 @@ VALUES (
 	}
 
 	destination := filepath.Join(t.TempDir(), "events.parquet")
-	count, err := (&ParquetExporter{DB: db}).Export(ctx, runner.Scenario{
+	err = (&ParquetExporter{DB: db}).Export(ctx, runner.Scenario{
 		ExecutionID: "execution",
 		ScenarioID:  "scenario",
 		Repetition:  1,
 	}, destination)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if count != 1 {
-		t.Fatalf("row count = %d, want 1", count)
 	}
 	if info, err := os.Stat(destination); err != nil || info.Size() == 0 {
 		t.Fatalf("parquet output is invalid: info=%v err=%v", info, err)

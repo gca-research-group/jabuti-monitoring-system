@@ -102,10 +102,10 @@ func (e *ParquetExporter) Close() error {
 	return e.DB.Close()
 }
 
-func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, destination string) (int64, error) {
+func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, destination string) error {
 	rows, err := e.DB.QueryContext(ctx, executionQuery, scenario.ExecutionID, scenario.ScenarioID, scenario.Repetition)
 	if err != nil {
-		return 0, fmt.Errorf("query experiment results: %w", err)
+		return fmt.Errorf("query experiment results: %w", err)
 	}
 	defer rows.Close()
 
@@ -113,17 +113,17 @@ func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, 
 	for rows.Next() {
 		event, scanErr := scanEvent(rows)
 		if scanErr != nil {
-			return int64(len(events)), fmt.Errorf("scan experiment result: %w", scanErr)
+			return fmt.Errorf("scan experiment result: %w", scanErr)
 		}
 		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
-		return int64(len(events)), fmt.Errorf("read experiment results: %w", err)
+		return fmt.Errorf("read experiment results: %w", err)
 	}
 	if err := writeAtomic(destination, events); err != nil {
-		return int64(len(events)), err
+		return err
 	}
-	return int64(len(events)), nil
+	return nil
 }
 
 func scanEvent(rows *sql.Rows) (Event, error) {

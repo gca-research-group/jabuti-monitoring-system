@@ -42,12 +42,9 @@ func TestExportUsesBoundIdentifiersAndWritesTypedParquet(t *testing.T) {
 
 	destination := filepath.Join(t.TempDir(), "execution", "scenario", "0003.parquet")
 	exporter := ParquetExporter{DB: db}
-	count, err := exporter.Export(context.Background(), scenario, destination)
+	err = exporter.Export(context.Background(), scenario, destination)
 	if err != nil {
 		t.Fatalf("Export() error = %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("row count = %d, want 1", count)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
