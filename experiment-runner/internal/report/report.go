@@ -42,6 +42,5 @@ func SaveScenariosToCSV(scenarios []runner.Scenario, filename string) error {
 		}
 	}
 
-	fmt.Printf("scenarios saved to %s\n", filename)
 	return nil
 }

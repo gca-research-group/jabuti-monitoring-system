@@ -35,7 +35,6 @@ func TestExecutorCompletesWhenEventDispatchFails(t *testing.T) {
 		defer sleepMu.Unlock()
 		sleeps = append(sleeps, duration)
 	}
-	executor.Now = func() time.Time { return time.Unix(0, 0) }
 	executor.Logf = func(string, ...any) {}
 
 	executor.Run(Scenario{

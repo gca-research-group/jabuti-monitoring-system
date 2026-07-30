@@ -20,7 +20,6 @@ type Executor struct {
 	Env    *config.Env
 	Token  string
 	Sleep  func(time.Duration)
-	Now    func() time.Time
 	Random *rand.Rand
 	Logf   func(string, ...any)
 
@@ -33,7 +32,6 @@ func NewExecutor(client EventClient, env *config.Env, token string, random *rand
 		Env:    env,
 		Token:  token,
 		Sleep:  time.Sleep,
-		Now:    time.Now,
 		Random: random,
 		Logf:   log.Printf,
 	}
@@ -55,27 +53,31 @@ func (e *Executor) Run(scenario Scenario) {
 
 func (e *Executor) runIntegrationProcess(scenario Scenario, integrationProcess int) {
 	startDelay := e.startDelay(scenario.MaxStartDelay)
-	e.Logf("integration process %d will start in %v at %v", integrationProcess, startDelay, e.Now())
+	if startDelay > 0 {
+		e.Logf("delaying integration process %d by %v", integrationProcess, startDelay)
+	}
 	e.Sleep(startDelay)
 
-	e.Logf("starting integration process %d for scenario %s at %v", integrationProcess, scenario.ScenarioID, e.Now())
-	e.runScenario(scenario)
-	e.Logf("completed integration process %d for scenario %s at %v", integrationProcess, scenario.ScenarioID, e.Now())
+	e.runScenario(scenario, integrationProcess)
 }
 
-func (e *Executor) runScenario(scenario Scenario) {
+func (e *Executor) runScenario(scenario Scenario, integrationProcess int) {
 	var wg sync.WaitGroup
 
 	for second := 0; second < scenario.Duration; second++ {
-		e.Logf("dispatching events %d at %v", second, e.Now())
-
 		for _, interval := range e.generateEvents(scenario.Events, scenario.Lambda) {
 			wg.Add(1)
 			go func(delay time.Duration) {
 				defer wg.Done()
 				e.Sleep(delay)
 				if err := e.Client.ExecuteSmartContract(e.Token, BuildMessage(e.Env, scenario)); err != nil {
-					e.Logf("failed to execute smart contract: %v", err)
+					e.Logf(
+						"event dispatch failed: scenario_id=%s repetition=%d integration_process=%d: %v",
+						scenario.ScenarioID,
+						scenario.Repetition,
+						integrationProcess,
+						err,
+					)
 				}
 			}(interval)
 		}
@@ -84,7 +86,6 @@ func (e *Executor) runScenario(scenario Scenario) {
 	}
 
 	wg.Wait()
-	e.Logf("all events completed")
 }
 
 func (e *Executor) startDelay(maxStartDelay int) time.Duration {
@@ -113,8 +114,6 @@ func (e *Executor) Validate() error {
 		return fmt.Errorf("environment configuration is required")
 	case e.Sleep == nil:
 		return fmt.Errorf("sleep function is required")
-	case e.Now == nil:
-		return fmt.Errorf("clock is required")
 	case e.Random == nil:
 		return fmt.Errorf("random source is required")
 	case e.Logf == nil:

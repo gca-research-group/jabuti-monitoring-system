@@ -66,11 +66,13 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	pending := make([]runner.Scenario, 0, len(scenarios))
 	for _, scenario := range scenarios {
 		if s.Registry.Contains(scenario.Metadata()) {
-			s.Logf("skipping completed scenario repetition: events=%d integration_processes=%d consumers=%d repetition=%d",
-				scenario.Events, scenario.IntegrationProcesses, scenario.Consumers, scenario.Repetition)
 			continue
 		}
 		pending = append(pending, scenario)
+	}
+	skipped := len(scenarios) - len(pending)
+	if skipped > 0 {
+		s.Logf("skipping %d previously completed scenario repetitions", skipped)
 	}
 	if len(pending) == 0 {
 		s.Logf("all configured scenario repetitions have already completed successfully")
@@ -86,6 +88,17 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	}
 
 	for index, scenario := range pending {
+		s.Logf(
+			"preparing scenario %d/%d: scenario_id=%s repetition=%d events_per_second=%d duration=%ds integration_processes=%d consumers=%d",
+			index+1,
+			len(pending),
+			scenario.ScenarioID,
+			scenario.Repetition,
+			scenario.Events,
+			scenario.Duration,
+			scenario.IntegrationProcesses,
+			scenario.Consumers,
+		)
 		if err := s.Infrastructure.Reset(); err != nil {
 			return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
 		}
@@ -101,7 +114,8 @@ func (s *Suite) Run(parameters config.Parameters) error {
 			return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
 		}
 
-		exportErr := s.Exporter.Export(ctx, scenario, s.Results.Destination(scenario))
+		destination := s.Results.Destination(scenario)
+		exportErr := s.Exporter.Export(ctx, scenario, destination)
 		if exportErr != nil {
 			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
 		}
@@ -109,12 +123,21 @@ func (s *Suite) Run(parameters config.Parameters) error {
 			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
 				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
 			}
+			s.Logf(
+				"completed scenario %d/%d: scenario_id=%s repetition=%d results=%s",
+				index+1,
+				len(pending),
+				scenario.ScenarioID,
+				scenario.Repetition,
+				destination,
+			)
 		}
 	}
 
 	if err := s.Infrastructure.Reset(); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
 	}
+	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
 	return nil
 }
 

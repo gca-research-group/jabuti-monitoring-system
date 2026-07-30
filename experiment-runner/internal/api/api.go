@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -116,14 +115,12 @@ func (c *Client) ExecuteSmartContract(token string, message SmartContractMessage
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		log.Printf("[ExecuteSmartContract] failed to marshal message: %v", err)
 		return fmt.Errorf("marshal message: %w", err)
 	}
 
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
 
 	if err != nil {
-		log.Printf("[ExecuteSmartContract] failed to create request: %v", err)
 		return fmt.Errorf("create request: %w", err)
 	}
 
@@ -132,16 +129,13 @@ func (c *Client) ExecuteSmartContract(token string, message SmartContractMessage
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		log.Printf("[ExecuteSmartContract] request failed: %v", err)
 		return fmt.Errorf("execute smart contract request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(resp.Body)
-		log.Printf("[ExecuteSmartContract] non-success response status=%d body=%s", resp.StatusCode, string(bodyBytes))
-
-		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return fmt.Errorf("execute smart contract returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	return nil
