@@ -40,7 +40,7 @@ func TestExportUsesBoundIdentifiersAndWritesTypedParquet(t *testing.T) {
 		WithArgs("execution", "scenario", 3).
 		WillReturnRows(sqlmock.NewRows(columns).AddRow(values...))
 
-	destination := filepath.Join(t.TempDir(), "scenario_id=scenario", "repetition=0003", "events.parquet")
+	destination := filepath.Join(t.TempDir(), "execution", "scenario", "0003.parquet")
 	exporter := ParquetExporter{DB: db}
 	count, err := exporter.Export(context.Background(), scenario, destination)
 	if err != nil {

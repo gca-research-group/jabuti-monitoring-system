@@ -85,26 +85,21 @@ The system will:
 2. Create an execution dataset and save its schedule to `scenarios.csv`.
 3. Sequentially execute each scenario repetition.
 4. Stop processing, query PostgreSQL, and atomically save the repetition as Zstandard-compressed Parquet before the next reset.
-5. Update `manifest.json` with row counts and export status.
 
 ### Experiment dataset
 
-Each invocation produces a Hive-style partitioned dataset:
+Each invocation produces the following dataset:
 
 ```text
 output/experiments/
 ├── successful-scenarios.json
-└── execution_id=<execution-uuid>/
-    ├── manifest.json
+└── <execution-uuid>/
     ├── scenarios.csv
-    └── scenario_id=<scenario-uuid>/
-        └── repetition=0001/
-            └── events.parquet
+    └── <scenario-uuid>/
+        ├── 0001.parquet
+        ├── 0002.parquet
+        └── ...
 ```
-
-The manifest reports `pending`, `exported`, `exported_with_count_mismatch`, or
-`failed` for every repetition. Export failures are logged and the suite continues,
-so inspect the manifest before analysing a run.
 
 `successful-scenarios.json` is the global completion registry. Before starting an
 experiment, the runner skips repetitions whose stable scenario metadata is already
@@ -115,13 +110,13 @@ runner exits without connecting to PostgreSQL or resetting infrastructure.
 Use only one runner process for a given `EXPERIMENT_OUTPUT_DIR`. The global registry
 uses atomic updates but does not provide cross-process locking.
 
-DuckDB can query all repetitions in one execution and infer the partition columns:
+DuckDB can query all repetitions in one execution:
 
 ```sql
 SELECT *
 FROM read_parquet(
-  'output/experiments/execution_id=<execution-uuid>/**/events.parquet',
-  hive_partitioning = true
+  'output/experiments/<execution-uuid>/*/*.parquet',
+  filename = true
 );
 ```
 
@@ -131,8 +126,8 @@ Polars can scan the same dataset lazily:
 import polars as pl
 
 events = pl.scan_parquet(
-    "output/experiments/execution_id=<execution-uuid>/**/events.parquet",
-    hive_partitioning=True,
+    "output/experiments/<execution-uuid>/*/*.parquet",
+    include_file_paths="source_file",
 )
 ```
 

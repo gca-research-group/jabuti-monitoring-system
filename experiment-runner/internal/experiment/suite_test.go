@@ -72,10 +72,6 @@ func (f *fakeExporter) Export(context.Context, runner.Scenario, string) (int64, 
 
 type fakeResults struct {
 	events      *[]string
-	recordError error
-	gotRows     int64
-	gotFailure  int
-	gotExport   error
 	initialized []runner.Scenario
 }
 
@@ -85,15 +81,6 @@ func (f *fakeResults) Initialize(scenarios []runner.Scenario) error {
 	return nil
 }
 func (f *fakeResults) Destination(runner.Scenario) string { return "events.parquet" }
-func (f *fakeResults) Record(_ runner.Scenario, rows int64, failures int, exportErr error) error {
-	*f.events = append(*f.events, "record")
-	f.gotRows, f.gotFailure, f.gotExport = rows, failures, exportErr
-	return f.recordError
-}
-func (f *fakeResults) Complete() error {
-	*f.events = append(*f.events, "complete")
-	return nil
-}
 
 type fakeRegistry struct {
 	completed map[runner.ScenarioMetadata]struct{}
@@ -128,7 +115,7 @@ func TestSuiteExportsAfterStopAndBeforeNextReset(t *testing.T) {
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	want := []string{"initialize", "reset", "consumers", "run", "stop", "export", "record", "reset", "complete"}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "export", "reset"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -137,16 +124,11 @@ func TestSuiteExportsAfterStopAndBeforeNextReset(t *testing.T) {
 func TestSuiteLogsExportFailureAndContinuesToFinalReset(t *testing.T) {
 	var events []string
 	exportErr := errors.New("write failed")
-	results := &fakeResults{events: &events}
 	suite := validSuite(&events)
 	suite.Exporter = &fakeExporter{events: &events, exportErr: exportErr, rowCount: 7}
-	suite.Results = results
 
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
-	}
-	if results.gotRows != 7 || !errors.Is(results.gotExport, exportErr) {
-		t.Fatalf("recorded rows/error = %d/%v", results.gotRows, results.gotExport)
 	}
 }
 
@@ -233,14 +215,12 @@ func TestSuiteRegistersOnlyCleanExactExport(t *testing.T) {
 		name         string
 		rowCount     int64
 		exportErr    error
-		recordErr    error
 		failedEvents int
 		wantMarks    int
 	}{
 		{name: "clean", rowCount: 1, wantMarks: 1},
 		{name: "count mismatch", rowCount: 0},
 		{name: "export failure", exportErr: errors.New("export failed")},
-		{name: "manifest failure", rowCount: 1, recordErr: errors.New("manifest failed")},
 		{name: "dispatch failure", rowCount: 1, failedEvents: 1},
 	}
 	for _, test := range tests {
@@ -249,7 +229,7 @@ func TestSuiteRegistersOnlyCleanExactExport(t *testing.T) {
 			registry := &fakeRegistry{}
 			suite := validSuite(&events)
 			suite.Exporter = &fakeExporter{events: &events, rowCount: test.rowCount, exportErr: test.exportErr}
-			suite.Results = &fakeResults{events: &events, recordError: test.recordErr}
+			suite.Results = &fakeResults{events: &events}
 			suite.Executor = fakeExecutor{events: &events, summary: runner.ExecutionSummary{FailedEvents: test.failedEvents}}
 			suite.Registry = registry
 
@@ -272,7 +252,7 @@ func TestSuiteRegistryWriteFailureAbortsBeforeFinalReset(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "record successful scenario") {
 		t.Fatalf("Run() error = %v", err)
 	}
-	want := []string{"initialize", "reset", "consumers", "run", "stop", "export", "record"}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "export"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -294,18 +274,18 @@ func TestSuiteMalformedRegistryAbortsBeforeDatabaseAndReset(t *testing.T) {
 	}
 }
 
-func TestSuiteRecordsExecutionFailures(t *testing.T) {
+func TestSuiteDoesNotRegisterExecutionFailures(t *testing.T) {
 	var events []string
-	results := &fakeResults{events: &events}
+	registry := &fakeRegistry{}
 	suite := validSuite(&events)
 	suite.Executor = fakeExecutor{events: &events, summary: runner.ExecutionSummary{FailedEvents: 3}}
-	suite.Results = results
+	suite.Registry = registry
 
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if results.gotFailure != 3 {
-		t.Fatalf("failed events = %d, want 3", results.gotFailure)
+	if len(registry.marks) != 0 {
+		t.Fatalf("registry marks = %d, want 0", len(registry.marks))
 	}
 }
 
@@ -318,7 +298,6 @@ func validSuite(events *[]string) Suite {
 		Results:        &fakeResults{events: events},
 		Registry:       &fakeRegistry{},
 		Sleep:          func(time.Duration) {},
-		Now:            func() time.Time { return time.Unix(0, 0) },
 		Random:         rand.New(rand.NewSource(1)),
 		Logf:           func(string, ...any) {},
 	}

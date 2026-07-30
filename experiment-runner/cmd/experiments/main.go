@@ -40,11 +40,10 @@ func run() error {
 		Infrastructure: infrastructure.NewResetManager(client, env),
 		Executor:       executor,
 		Exporter:       resultExporter,
-		Results:        &experiment.Dataset{OutputRoot: env.ExperimentOutputDir, Now: time.Now},
+		Results:        &experiment.Dataset{OutputRoot: env.ExperimentOutputDir},
 		Registry:       &experiment.JSONSuccessRegistry{OutputRoot: env.ExperimentOutputDir},
 		Token:          env.ApiKey,
 		Sleep:          time.Sleep,
-		Now:            time.Now,
 		Random:         random,
 	}
 

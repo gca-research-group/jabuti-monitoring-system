@@ -32,8 +32,6 @@ type ScenarioExecutor interface {
 type ExperimentResults interface {
 	Initialize(scenarios []runner.Scenario) error
 	Destination(scenario runner.Scenario) string
-	Record(scenario runner.Scenario, rowCount int64, failedEvents int, exportErr error) error
-	Complete() error
 }
 
 type SuccessRegistry interface {
@@ -50,8 +48,7 @@ type Suite struct {
 	Results        ExperimentResults
 	Registry       SuccessRegistry
 	Token          string
-	Sleep          func(time.Duration)
-	Now            func() time.Time
+	Sleep          func(duration time.Duration)
 	Random         *rand.Rand
 	Logf           func(string, ...any)
 }
@@ -108,11 +105,7 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		if exportErr != nil {
 			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
 		}
-		recordErr := s.Results.Record(scenario, rowCount, summary.FailedEvents, exportErr)
-		if recordErr != nil {
-			s.Logf("failed to update manifest for scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, recordErr)
-		}
-		if exportErr == nil && recordErr == nil && summary.FailedEvents == 0 && rowCount == expectedRows(scenario) {
+		if exportErr == nil && summary.FailedEvents == 0 && rowCount == expectedRows(scenario) {
 			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
 				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
 			}
@@ -121,9 +114,6 @@ func (s *Suite) Run(parameters config.Parameters) error {
 
 	if err := s.Infrastructure.Reset(); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
-	}
-	if err := s.Results.Complete(); err != nil {
-		return fmt.Errorf("complete experiment manifest: %w", err)
 	}
 	return nil
 }
@@ -144,8 +134,6 @@ func (s *Suite) validate() error {
 		return fmt.Errorf("successful scenario registry is required")
 	case s.Sleep == nil:
 		return fmt.Errorf("sleep function is required")
-	case s.Now == nil:
-		return fmt.Errorf("clock is required")
 	case s.Random == nil:
 		return fmt.Errorf("random source is required")
 	}
