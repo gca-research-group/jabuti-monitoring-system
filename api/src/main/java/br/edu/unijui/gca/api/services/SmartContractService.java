@@ -56,6 +56,10 @@ public class SmartContractService extends BaseService<
 
     private void validatePostActions(List<SmartContractClauseDto> clauses) {
         clauses.forEach(clause -> {
+            if (Objects.isNull(clause.getPostExecutionActions())){
+                return;
+            }
+
             clause.getPostExecutionActions().forEach(action -> {
                 if (action.getType() == PostExecutionActionType.WEBHOOK && Objects.isNull(action.getUrl())) {
                     throw new RuntimeException("");

@@ -1,7 +1,7 @@
 services:
 
   api:
-    image: eclipse-temurin:21-jre
+    image: eclipse-temurin:26-jre
     container_name: api
     restart: unless-stopped
     working_dir: /app

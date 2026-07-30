@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.services;
 import br.edu.unijui.gca.api.dtos.apikey.ApiKeyDto;
 import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.entities.User;
-import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
+import br.edu.unijui.gca.api.exceptions.ApiKeyNotFoundException;
 import br.edu.unijui.gca.api.repositories.ApiKeyRepository;
 import br.edu.unijui.gca.api.utils.HashUtils;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
@@ -74,7 +75,7 @@ public class ApiKeyService {
         String incomingHash = HashUtils.sha256(secret);
 
         if (!MessageDigest.isEqual(HexFormat.of().parseHex(incomingHash), HexFormat.of().parseHex(apiKey.getKeyHash()))) {
-            throw new ResourceNotFoundException();
+            throw new ApiKeyNotFoundException();
         }
     }
 }

@@ -8,7 +8,7 @@
 
         <createTable tableName="api_keys">
 
-            <column name="id" type="uuid" defaultValueComputed="gen_random_uuid()">
+            <column name="id" type="uuid">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
 

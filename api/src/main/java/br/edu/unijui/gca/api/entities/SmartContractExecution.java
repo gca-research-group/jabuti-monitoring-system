@@ -1,35 +1,26 @@
 package br.edu.unijui.gca.api.entities;
 
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
-import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.UuidGenerator;
 import org.hibernate.type.SqlTypes;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
 import java.util.Map;
-import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "smart_contract_executions")
-public class SmartContractExecution {
-
-    @Id
-    @UuidGenerator
-    @Column
-    private UUID id;
+public class SmartContractExecution extends BaseUUIDEntity {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
