@@ -12,7 +12,6 @@ tmp
 
 # Go Modules & Dependencies
 /vendor/
-go.sum
 
 # Editor & OS Files
 *.swp

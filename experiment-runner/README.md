@@ -69,6 +69,8 @@ Edit the `.env` file with your specific settings:
 - `ADMIN_PASSWORD`: Admin password for authentication.
 - `BLOCKCHAIN_ID`: The ID of the blockchain network to use.
 - `SMART_CONTRACT_ID`: The ID of the smart contract to execute.
+- `DATABASE_URL`: PostgreSQL connection string used to export results before each database reset.
+- `EXPERIMENT_OUTPUT_DIR`: Dataset root (defaults to `output/experiments`).
 
 ### Running the Experiments
 
@@ -80,8 +82,59 @@ go run cmd/experiments/main.go
 
 The system will:
 1. Generate a series of scenarios with varying parameters (events, parallels, consumers).
-2. Save the generated scenarios to `scenarios.csv`.
-3. Sequentially execute each scenario, logging the progress to the console.
+2. Create an execution dataset and save its schedule to `scenarios.csv`.
+3. Sequentially execute each scenario repetition.
+4. Stop processing, query PostgreSQL, and atomically save the repetition as Zstandard-compressed Parquet before the next reset.
+5. Update `manifest.json` with row counts and export status.
+
+### Experiment dataset
+
+Each invocation produces a Hive-style partitioned dataset:
+
+```text
+output/experiments/
+├── successful-scenarios.json
+└── execution_id=<execution-uuid>/
+    ├── manifest.json
+    ├── scenarios.csv
+    └── scenario_id=<scenario-uuid>/
+        └── repetition=0001/
+            └── events.parquet
+```
+
+The manifest reports `pending`, `exported`, `exported_with_count_mismatch`, or
+`failed` for every repetition. Export failures are logged and the suite continues,
+so inspect the manifest before analysing a run.
+
+`successful-scenarios.json` is the global completion registry. Before starting an
+experiment, the runner skips repetitions whose stable scenario metadata is already
+registered. A repetition is registered only after an exact-row-count Parquet export
+with no event dispatch failures. If all configured repetitions are registered, the
+runner exits without connecting to PostgreSQL or resetting infrastructure.
+
+Use only one runner process for a given `EXPERIMENT_OUTPUT_DIR`. The global registry
+uses atomic updates but does not provide cross-process locking.
+
+DuckDB can query all repetitions in one execution and infer the partition columns:
+
+```sql
+SELECT *
+FROM read_parquet(
+  'output/experiments/execution_id=<execution-uuid>/**/events.parquet',
+  hive_partitioning = true
+);
+```
+
+Polars can scan the same dataset lazily:
+
+```python
+import polars as pl
+
+events = pl.scan_parquet(
+    "output/experiments/execution_id=<execution-uuid>/**/events.parquet",
+    hive_partitioning=True,
+)
+```
 
 ## Project repositories
 

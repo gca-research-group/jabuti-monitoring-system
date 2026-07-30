@@ -72,6 +72,10 @@ func (c *Client) StopProcessing(token string) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode >= http.StatusMultipleChoices {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("stop benchmark returned status %d: %s", resp.StatusCode, string(body))
+	}
 	return nil
 }
 

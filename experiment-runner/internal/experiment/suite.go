@@ -1,7 +1,9 @@
 package experiment
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"math/rand"
 	"time"
 
@@ -18,23 +20,40 @@ type Infrastructure interface {
 	Reset() error
 }
 
-type ScenarioReport interface {
-	Save(scenarios []runner.Scenario, filename string) error
+type ResultExporter interface {
+	Validate(ctx context.Context) error
+	Export(ctx context.Context, scenario runner.Scenario, destination string) (int64, error)
 }
 
 type ScenarioExecutor interface {
-	Run(scenario runner.Scenario)
+	Run(scenario runner.Scenario) runner.ExecutionSummary
+}
+
+type ExperimentResults interface {
+	Initialize(scenarios []runner.Scenario) error
+	Destination(scenario runner.Scenario) string
+	Record(scenario runner.Scenario, rowCount int64, failedEvents int, exportErr error) error
+	Complete() error
+}
+
+type SuccessRegistry interface {
+	Load() error
+	Contains(metadata runner.ScenarioMetadata) bool
+	MarkSuccessful(metadata runner.ScenarioMetadata) error
 }
 
 type Suite struct {
 	Client         APIClient
 	Infrastructure Infrastructure
-	Report         ScenarioReport
 	Executor       ScenarioExecutor
+	Exporter       ResultExporter
+	Results        ExperimentResults
+	Registry       SuccessRegistry
 	Token          string
 	Sleep          func(time.Duration)
 	Now            func() time.Time
 	Random         *rand.Rand
+	Logf           func(string, ...any)
 }
 
 func (s *Suite) Run(parameters config.Parameters) error {
@@ -43,12 +62,33 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	}
 
 	scenarios := runner.GenerateScenarios(parameters, s.Random)
-	filename := s.Now().Format("200601021504.csv")
-	if err := s.Report.Save(scenarios, filename); err != nil {
-		return fmt.Errorf("save scenarios to CSV: %w", err)
+	if err := s.Registry.Load(); err != nil {
+		return fmt.Errorf("load successful scenarios: %w", err)
 	}
 
-	for index, scenario := range scenarios {
+	pending := make([]runner.Scenario, 0, len(scenarios))
+	for _, scenario := range scenarios {
+		if s.Registry.Contains(scenario.Metadata()) {
+			s.Logf("skipping completed scenario repetition: events=%d integration_processes=%d consumers=%d repetition=%d",
+				scenario.Events, scenario.IntegrationProcesses, scenario.Consumers, scenario.Repetition)
+			continue
+		}
+		pending = append(pending, scenario)
+	}
+	if len(pending) == 0 {
+		s.Logf("all configured scenario repetitions have already completed successfully")
+		return nil
+	}
+
+	ctx := context.Background()
+	if err := s.Exporter.Validate(ctx); err != nil {
+		return err
+	}
+	if err := s.Results.Initialize(pending); err != nil {
+		return fmt.Errorf("initialize experiment results: %w", err)
+	}
+
+	for index, scenario := range pending {
 		if err := s.Infrastructure.Reset(); err != nil {
 			return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
 		}
@@ -58,17 +98,33 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		}
 
 		s.Sleep(10 * time.Second)
-		s.Executor.Run(scenario)
+		summary := s.Executor.Run(scenario)
 
 		if err := s.Client.StopProcessing(s.Token); err != nil {
 			return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
+		}
+
+		rowCount, exportErr := s.Exporter.Export(ctx, scenario, s.Results.Destination(scenario))
+		if exportErr != nil {
+			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
+		}
+		recordErr := s.Results.Record(scenario, rowCount, summary.FailedEvents, exportErr)
+		if recordErr != nil {
+			s.Logf("failed to update manifest for scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, recordErr)
+		}
+		if exportErr == nil && recordErr == nil && summary.FailedEvents == 0 && rowCount == expectedRows(scenario) {
+			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
+				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
+			}
 		}
 	}
 
 	if err := s.Infrastructure.Reset(); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
 	}
-
+	if err := s.Results.Complete(); err != nil {
+		return fmt.Errorf("complete experiment manifest: %w", err)
+	}
 	return nil
 }
 
@@ -78,17 +134,23 @@ func (s *Suite) validate() error {
 		return fmt.Errorf("API client is required")
 	case s.Infrastructure == nil:
 		return fmt.Errorf("infrastructure resetter is required")
-	case s.Report == nil:
-		return fmt.Errorf("scenario report is required")
 	case s.Executor == nil:
 		return fmt.Errorf("scenario executor is required")
+	case s.Exporter == nil:
+		return fmt.Errorf("result exporter is required")
+	case s.Results == nil:
+		return fmt.Errorf("experiment results store is required")
+	case s.Registry == nil:
+		return fmt.Errorf("successful scenario registry is required")
 	case s.Sleep == nil:
 		return fmt.Errorf("sleep function is required")
 	case s.Now == nil:
 		return fmt.Errorf("clock is required")
 	case s.Random == nil:
 		return fmt.Errorf("random source is required")
-	default:
-		return nil
 	}
+	if s.Logf == nil {
+		s.Logf = log.Printf
+	}
+	return nil
 }

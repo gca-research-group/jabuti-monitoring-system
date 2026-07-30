@@ -19,3 +19,17 @@ func TestLoadEnvLoadsFabricCredentialPaths(t *testing.T) {
 		t.Fatalf("FabricSignCertPath = %q", env.FabricSignCertPath)
 	}
 }
+
+func TestLoadEnvLoadsExperimentStorageConfiguration(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://user:secret@db/experiments")
+	t.Setenv("EXPERIMENT_OUTPUT_DIR", "custom/results")
+
+	env := LoadEnv()
+
+	if env.DatabaseURL != "postgres://user:secret@db/experiments" {
+		t.Fatalf("DatabaseURL = %q", env.DatabaseURL)
+	}
+	if env.ExperimentOutputDir != "custom/results" {
+		t.Fatalf("ExperimentOutputDir = %q", env.ExperimentOutputDir)
+	}
+}

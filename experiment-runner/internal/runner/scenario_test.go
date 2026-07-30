@@ -41,3 +41,32 @@ func TestGenerateScenariosBuildsAllCombinations(t *testing.T) {
 		}
 	}
 }
+
+func TestScenarioMetadataIgnoresGeneratedIDsAndUsesEveryStableField(t *testing.T) {
+	first := Scenario{
+		ExecutionID: "execution-1", ScenarioID: "scenario-1",
+		Events: 10, Lambda: 0.5, Duration: 300, IntegrationProcesses: 2,
+		MaxStartDelay: 1, Consumers: 4, Repetition: 3,
+	}
+	second := first
+	second.ExecutionID = "execution-2"
+	second.ScenarioID = "scenario-2"
+	if first.Metadata() != second.Metadata() {
+		t.Fatal("metadata differs only because generated IDs differ")
+	}
+
+	tests := []Scenario{
+		func() Scenario { value := first; value.Events++; return value }(),
+		func() Scenario { value := first; value.Lambda++; return value }(),
+		func() Scenario { value := first; value.Duration++; return value }(),
+		func() Scenario { value := first; value.IntegrationProcesses++; return value }(),
+		func() Scenario { value := first; value.MaxStartDelay++; return value }(),
+		func() Scenario { value := first; value.Consumers++; return value }(),
+		func() Scenario { value := first; value.Repetition++; return value }(),
+	}
+	for _, changed := range tests {
+		if first.Metadata() == changed.Metadata() {
+			t.Fatalf("metadata did not distinguish changed scenario: %#v", changed)
+		}
+	}
+}

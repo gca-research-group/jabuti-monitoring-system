@@ -11,6 +11,8 @@ import (
 type Env struct {
 	BaseURL              string
 	ApiKey               string
+	DatabaseURL          string
+	ExperimentOutputDir  string
 	BlockchainID         string
 	SmartContractID      string
 	FabricCACertPath     string
@@ -32,10 +34,12 @@ func LoadEnv() *Env {
 	loadDotEnv(".env")
 
 	return &Env{
-		BaseURL:         getEnv("API_BASE_URL", "http://localhost:8080"),
-		ApiKey:          getEnv("API_KEY", ""),
-		BlockchainID:    getEnv("BLOCKCHAIN_ID", ""),
-		SmartContractID: getEnv("SMART_CONTRACT_ID", ""),
+		BaseURL:             getEnv("API_BASE_URL", "http://localhost:8080"),
+		ApiKey:              getEnv("API_KEY", ""),
+		DatabaseURL:         getEnv("DATABASE_URL", ""),
+		ExperimentOutputDir: getEnv("EXPERIMENT_OUTPUT_DIR", "output/experiments"),
+		BlockchainID:        getEnv("BLOCKCHAIN_ID", ""),
+		SmartContractID:     getEnv("SMART_CONTRACT_ID", ""),
 		FabricCACertPath: getEnv(
 			"FABRIC_CA_CERT_PATH",
 			"/home/monitor/app/output/network-with-chaincode/org1.network-with-chaincode.com/data/certificate-authority/organizations/peerOrganizations/org1.network-with-chaincode.com/peers/peer0.org1.network-with-chaincode.com/tls/ca.crt",

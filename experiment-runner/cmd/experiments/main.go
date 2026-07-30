@@ -9,6 +9,7 @@ import (
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/experiment"
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/exporter"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/infrastructure"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/runner"
 )
@@ -26,18 +27,21 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("load parameters: %w", err)
 	}
-
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	executor := runner.NewExecutor(client, env, env.ApiKey, random)
 	if err := executor.Validate(); err != nil {
 		return fmt.Errorf("configure scenario executor: %w", err)
 	}
 
+	resultExporter := &exporter.ParquetExporter{DatabaseURL: env.DatabaseURL}
+	defer resultExporter.Close()
 	suite := experiment.Suite{
 		Client:         client,
 		Infrastructure: infrastructure.NewResetManager(client, env),
-		Report:         experiment.CSVReport{},
 		Executor:       executor,
+		Exporter:       resultExporter,
+		Results:        &experiment.Dataset{OutputRoot: env.ExperimentOutputDir, Now: time.Now},
+		Registry:       &experiment.JSONSuccessRegistry{OutputRoot: env.ExperimentOutputDir},
 		Token:          env.ApiKey,
 		Sleep:          time.Sleep,
 		Now:            time.Now,

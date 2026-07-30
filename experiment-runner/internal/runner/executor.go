@@ -27,6 +27,10 @@ type Executor struct {
 	randomMu sync.Mutex
 }
 
+type ExecutionSummary struct {
+	FailedEvents int
+}
+
 func NewExecutor(client EventClient, env *config.Env, token string, random *rand.Rand) *Executor {
 	return &Executor{
 		Client: client,
@@ -39,32 +43,42 @@ func NewExecutor(client EventClient, env *config.Env, token string, random *rand
 	}
 }
 
-func (e *Executor) Run(scenario Scenario) {
+func (e *Executor) Run(scenario Scenario) ExecutionSummary {
 	var wg sync.WaitGroup
+	failures := make(chan int, scenario.IntegrationProcesses)
 
 	for integrationProcess := 1; integrationProcess <= scenario.IntegrationProcesses; integrationProcess++ {
 		wg.Add(1)
 		go func(process int) {
 			defer wg.Done()
-			e.runIntegrationProcess(scenario, process)
+			failures <- e.runIntegrationProcess(scenario, process)
 		}(integrationProcess)
 	}
 
 	wg.Wait()
+	close(failures)
+
+	summary := ExecutionSummary{}
+	for count := range failures {
+		summary.FailedEvents += count
+	}
+	return summary
 }
 
-func (e *Executor) runIntegrationProcess(scenario Scenario, integrationProcess int) {
+func (e *Executor) runIntegrationProcess(scenario Scenario, integrationProcess int) int {
 	startDelay := e.startDelay(scenario.MaxStartDelay)
 	e.Logf("integration process %d will start in %v at %v", integrationProcess, startDelay, e.Now())
 	e.Sleep(startDelay)
 
 	e.Logf("starting integration process %d for scenario %s at %v", integrationProcess, scenario.ScenarioID, e.Now())
-	e.runScenario(scenario)
+	failures := e.runScenario(scenario)
 	e.Logf("completed integration process %d for scenario %s at %v", integrationProcess, scenario.ScenarioID, e.Now())
+	return failures
 }
 
-func (e *Executor) runScenario(scenario Scenario) {
+func (e *Executor) runScenario(scenario Scenario) int {
 	var wg sync.WaitGroup
+	failures := make(chan struct{}, scenario.Events*scenario.Duration)
 
 	for second := 0; second < scenario.Duration; second++ {
 		e.Logf("dispatching events %d at %v", second, e.Now())
@@ -76,6 +90,7 @@ func (e *Executor) runScenario(scenario Scenario) {
 				e.Sleep(delay)
 				if err := e.Client.ExecuteSmartContract(e.Token, BuildMessage(e.Env, scenario)); err != nil {
 					e.Logf("failed to execute smart contract: %v", err)
+					failures <- struct{}{}
 				}
 			}(interval)
 		}
@@ -84,7 +99,9 @@ func (e *Executor) runScenario(scenario Scenario) {
 	}
 
 	wg.Wait()
+	close(failures)
 	e.Logf("all events completed")
+	return len(failures)
 }
 
 func (e *Executor) startDelay(maxStartDelay int) time.Duration {

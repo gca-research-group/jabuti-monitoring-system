@@ -19,6 +19,28 @@ type Scenario struct {
 	Repetition           int
 }
 
+type ScenarioMetadata struct {
+	Events               int     `json:"events"`
+	Lambda               float64 `json:"lambda"`
+	Duration             int     `json:"duration"`
+	IntegrationProcesses int     `json:"integrationProcesses"`
+	MaxStartDelay        int     `json:"maxStartDelay"`
+	Consumers            int     `json:"consumers"`
+	Repetition           int     `json:"repetition"`
+}
+
+func (s Scenario) Metadata() ScenarioMetadata {
+	return ScenarioMetadata{
+		Events:               s.Events,
+		Lambda:               s.Lambda,
+		Duration:             s.Duration,
+		IntegrationProcesses: s.IntegrationProcesses,
+		MaxStartDelay:        s.MaxStartDelay,
+		Consumers:            s.Consumers,
+		Repetition:           s.Repetition,
+	}
+}
+
 func GenerateScenarios(parameters config.Parameters, random *rand.Rand) []Scenario {
 	scenarios := make([]Scenario, 0,
 		len(parameters.Events)*len(parameters.IntegrationProcesses)*len(parameters.Consumers)*parameters.Repetitions)
