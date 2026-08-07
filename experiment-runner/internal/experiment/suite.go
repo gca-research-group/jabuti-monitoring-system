@@ -7,13 +7,15 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/runner"
 )
 
 type APIClient interface {
 	SetUpConsumers(token string, quantity int) error
-	StopProcessing(token string) error
+	StopRabbitMQ(token string) error
+	ExecuteSmartContract(token string, message api.SmartContractMessage) error
 }
 
 type Infrastructure interface {
@@ -65,19 +67,20 @@ func (s *Suite) Run(parameters config.Parameters) error {
 
 	pending := make([]runner.Scenario, 0, len(scenarios))
 	for _, scenario := range scenarios {
-		if s.Registry.Contains(scenario.Metadata()) {
-			continue
-		}
+		// if s.Registry.Contains(scenario.Metadata()) {
+		// 	continue
+		// }
 		pending = append(pending, scenario)
 	}
-	skipped := len(scenarios) - len(pending)
-	if skipped > 0 {
-		s.Logf("skipping %d previously completed scenario repetitions", skipped)
-	}
-	if len(pending) == 0 {
-		s.Logf("all configured scenario repetitions have already completed successfully")
-		return nil
-	}
+	skipped := 0
+	//skipped := len(scenarios) - len(pending)
+	// if skipped > 0 {
+	// 	s.Logf("skipping %d previously completed scenario repetitions", skipped)
+	// }
+	// if len(pending) == 0 {
+	// 	s.Logf("all configured scenario repetitions have already completed successfully")
+	// 	return nil
+	// }
 
 	ctx := context.Background()
 	if err := s.Exporter.Validate(ctx); err != nil {
@@ -99,9 +102,14 @@ func (s *Suite) Run(parameters config.Parameters) error {
 			scenario.IntegrationProcesses,
 			scenario.Consumers,
 		)
+
 		if err := s.Infrastructure.Reset(); err != nil {
 			return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
 		}
+
+		/* s.Client.ExecuteSmartContract(s.Token, api.SmartContractMessage{
+			BlockchainID: scenario.,
+		}) */
 
 		if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
 			return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
@@ -110,19 +118,22 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		s.Sleep(10 * time.Second)
 		s.Executor.Run(scenario)
 
-		if err := s.Client.StopProcessing(s.Token); err != nil {
-			return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
-		}
+		// if err := s.Client.StopRabbitMQ(s.Token); err != nil {
+		// 	return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
+		// }
 
 		destination := s.Results.Destination(scenario)
 		exportErr := s.Exporter.Export(ctx, scenario, destination)
+
 		if exportErr != nil {
 			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
 		}
+
 		if exportErr == nil {
 			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
 				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
 			}
+
 			s.Logf(
 				"completed scenario %d/%d: scenario_id=%s repetition=%d results=%s",
 				index+1,
@@ -134,9 +145,9 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		}
 	}
 
-	if err := s.Infrastructure.Reset(); err != nil {
-		return fmt.Errorf("final infrastructure reset: %w", err)
-	}
+	// if err := s.Infrastructure.Reset(); err != nil {
+	// 	return fmt.Errorf("final infrastructure reset: %w", err)
+	// }
 	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
 	return nil
 }

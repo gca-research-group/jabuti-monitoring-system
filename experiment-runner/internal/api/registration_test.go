@@ -32,7 +32,7 @@ func TestRegisterBlockchainSendsPayloadAndReturnsID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL)
+	client := NewClient(server.URL, testHTTPConfig())
 	payload := BlockchainRegistration{
 		Name:     "Hyperledger Fabric",
 		Platform: "HYPERLEDGER_FABRIC",
@@ -63,7 +63,7 @@ func TestRegisterSmartContractUsesHyphenatedRoute(t *testing.T) {
 	}))
 	defer server.Close()
 
-	id, err := NewClient(server.URL).RegisterSmartContract("token", SmartContractRegistration{Name: "Product"})
+	id, err := NewClient(server.URL, testHTTPConfig()).RegisterSmartContract("token", SmartContractRegistration{Name: "Product"})
 	if err != nil {
 		t.Fatalf("RegisterSmartContract() error = %v", err)
 	}
@@ -78,7 +78,7 @@ func TestRegistrationRejectsNonSuccessResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL).RegisterBlockchain("token", BlockchainRegistration{})
+	_, err := NewClient(server.URL, testHTTPConfig()).RegisterBlockchain("token", BlockchainRegistration{})
 	if err == nil || !strings.Contains(err.Error(), "status 400") || !strings.Contains(err.Error(), "invalid payload") {
 		t.Fatalf("RegisterBlockchain() error = %v", err)
 	}
@@ -90,7 +90,7 @@ func TestRegistrationRequiresResponseID(t *testing.T) {
 	}))
 	defer server.Close()
 
-	_, err := NewClient(server.URL).RegisterBlockchain("token", BlockchainRegistration{})
+	_, err := NewClient(server.URL, testHTTPConfig()).RegisterBlockchain("token", BlockchainRegistration{})
 	if err == nil || !strings.Contains(err.Error(), "does not contain an id") {
 		t.Fatalf("RegisterBlockchain() error = %v", err)
 	}

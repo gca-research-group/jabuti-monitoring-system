@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 )
 
@@ -70,9 +69,8 @@ func (c *Client) register(token, path string, payload any) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("send registration request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(resp.Body)
+	responseBody, err := readAndClose(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("read registration response: %w", err)
 	}

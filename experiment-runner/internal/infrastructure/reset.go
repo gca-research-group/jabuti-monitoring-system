@@ -21,6 +21,7 @@ type ResetManager struct {
 	Registrar RegistrationClient
 	Env       *config.Env
 	Sleep     func(time.Duration)
+	Client    *api.Client
 }
 
 type CommandRunner interface {
@@ -33,12 +34,13 @@ type RegistrationClient interface {
 	RegisterSmartContract(token string, payload api.SmartContractRegistration) (string, error)
 }
 
-func NewResetManager(registrar RegistrationClient, env *config.Env) *ResetManager {
+func NewResetManager(registrar RegistrationClient, env *config.Env, client *api.Client) *ResetManager {
 	return &ResetManager{
 		SSH:       NewSSHClient(),
 		Registrar: registrar,
 		Env:       env,
 		Sleep:     time.Sleep,
+		Client:    client,
 	}
 }
 
@@ -75,10 +77,10 @@ func (m *ResetManager) Reset() error {
 			name:    "RabbitMQ",
 			address: rabbitMQAddress,
 			commands: []string{
-				"cd /home/monitor/app && docker compose down",
+				"cd /home/monitor/app && docker compose -f rabbitmq.yml down",
 				"cd /home/monitor/app && rm -rf volumes/rabbitmq",
 				"cd /home/monitor/app && cp -a volumes/baseline volumes/rabbitmq",
-				"cd /home/monitor/app && docker compose up --build -d",
+				"cd /home/monitor/app && docker compose -f rabbitmq.yml up --build -d",
 			},
 		},
 		{
@@ -150,7 +152,8 @@ func (m *ResetManager) registerFabricResources() error {
 
 	m.Env.BlockchainID = blockchainID
 	m.Env.SmartContractID = smartContractID
-	return nil
+
+	return m.createProduct()
 }
 
 func (m *ResetManager) readFabricFile(name, path string) (string, error) {
@@ -192,4 +195,18 @@ func productSmartContractRegistration() api.SmartContractRegistration {
 		},
 		Status: true,
 	}
+}
+
+func (m *ResetManager) createProduct() error {
+	return m.Client.ExecuteSmartContract(m.Env.ApiKey, api.SmartContractMessage{
+		BlockchainID:    m.Env.BlockchainID,
+		SmartContractID: m.Env.SmartContractID,
+		ClauseName:      "CreateProduct",
+		ClauseArguments: []api.ClauseArgument{
+			{Name: "id", Value: "1"},
+			{Name: "name", Value: "test"},
+			{Name: "description", Value: "test"},
+			{Name: "price", Value: "1"},
+		},
+	})
 }

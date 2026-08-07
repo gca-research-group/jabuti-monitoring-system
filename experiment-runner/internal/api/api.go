@@ -3,9 +3,11 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 type ClauseArgument struct {
@@ -35,51 +37,75 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-func NewClient(baseURL string) *Client {
+type HTTPConfig struct {
+	MaxIdleConns          int
+	MaxIdleConnsPerHost   int
+	IdleConnTimeout       time.Duration
+	ResponseHeaderTimeout time.Duration
+	RequestTimeout        time.Duration
+}
+
+func NewClient(baseURL string, config HTTPConfig) *Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConns = config.MaxIdleConns
+	transport.MaxIdleConnsPerHost = config.MaxIdleConnsPerHost
+	transport.IdleConnTimeout = config.IdleConnTimeout
+	transport.ResponseHeaderTimeout = config.ResponseHeaderTimeout
+
 	return &Client{
-		BaseURL:    baseURL,
-		HTTPClient: &http.Client{},
+		BaseURL: baseURL,
+		HTTPClient: &http.Client{
+			Transport: transport,
+			Timeout:   config.RequestTimeout,
+		},
 	}
 }
 
-func (c *Client) StartProcessing(token string) error {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/benchmark/start", c.BaseURL), nil)
+func (c *Client) StartRabbitMQ(token string) error {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/rabbitmq/start", c.BaseURL), nil)
 	if err != nil {
-		return fmt.Errorf("failed to create start benchmark request: %v", err)
+		return fmt.Errorf("failed to create start rabbitmq request: %v", err)
 	}
 
 	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to start benchmark: %v", err)
+		return fmt.Errorf("failed to start rabbitmq: %v", err)
 	}
-	defer resp.Body.Close()
 
+	if err := drainAndClose(resp.Body); err != nil {
+		return fmt.Errorf("read start rabbitmq response: %w", err)
+	}
 	return nil
 }
 
-func (c *Client) StopProcessing(token string) error {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/benchmark/stop", c.BaseURL), nil)
+func (c *Client) StopRabbitMQ(token string) error {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/rabbitmq/stop", c.BaseURL), nil)
 	if err != nil {
-		return fmt.Errorf("failed to create stop benchmark request: %v", err)
+		return fmt.Errorf("failed to create stop rabbitmq request: %v", err)
 	}
 
 	req.Header.Set("X-API-Key", token)
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to stop benchmark: %v", err)
+		return fmt.Errorf("failed to stop rabbitmq: %v", err)
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode >= http.StatusMultipleChoices {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("stop benchmark returned status %d: %s", resp.StatusCode, string(body))
+		body, err := readAndClose(resp.Body)
+		if err != nil {
+			return fmt.Errorf("read stop rabbitmq error response: %w", err)
+		}
+		return fmt.Errorf("stop rabbitmq returned status %d: %s", resp.StatusCode, string(body))
+	}
+	if err := drainAndClose(resp.Body); err != nil {
+		return fmt.Errorf("read stop rabbitmq response: %w", err)
 	}
 	return nil
 }
 
 func (c *Client) PurgeNotProcessedEvents(token string) error {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/benchmark/purge-all", c.BaseURL), nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/rabbitmq/purge-all", c.BaseURL), nil)
 	if err != nil {
 		return fmt.Errorf("failed to purge queues: %v", err)
 	}
@@ -89,8 +115,10 @@ func (c *Client) PurgeNotProcessedEvents(token string) error {
 	if err != nil {
 		return fmt.Errorf("failed to purge queues: %v", err)
 	}
-	defer resp.Body.Close()
 
+	if err := drainAndClose(resp.Body); err != nil {
+		return fmt.Errorf("read purge queues response: %w", err)
+	}
 	return nil
 }
 
@@ -105,8 +133,10 @@ func (c *Client) SetUpConsumers(token string, quantity int) error {
 	if err != nil {
 		return fmt.Errorf("failed to set up consumers: %v", err)
 	}
-	defer resp.Body.Close()
 
+	if err := drainAndClose(resp.Body); err != nil {
+		return fmt.Errorf("read set up consumers response: %w", err)
+	}
 	return nil
 }
 
@@ -115,13 +145,13 @@ func (c *Client) ExecuteSmartContract(token string, message SmartContractMessage
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("marshal message: %w", err)
+		return wrapExecutionError(failureStageRequestEncoding, fmt.Errorf("marshal message: %w", err))
 	}
 
 	req, err := http.NewRequest("POST", endpoint, bytes.NewBuffer(body))
 
 	if err != nil {
-		return fmt.Errorf("create request: %w", err)
+		return wrapExecutionError(failureStageRequestCreation, fmt.Errorf("create request: %w", err))
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -129,14 +159,37 @@ func (c *Client) ExecuteSmartContract(token string, message SmartContractMessage
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("execute smart contract request: %w", err)
+		return wrapExecutionError(failureStageTransport, fmt.Errorf("execute smart contract request: %w", err))
 	}
-	defer resp.Body.Close()
 
 	if resp.StatusCode >= 300 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("execute smart contract returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		bodyBytes, err := readAndClose(resp.Body)
+		if err != nil {
+			return wrapExecutionError(
+				failureStageResponseBody,
+				fmt.Errorf("read execute smart contract error response: %w", err),
+			)
+		}
+		return &httpStatusError{statusCode: resp.StatusCode, body: bodyBytes}
 	}
 
+	if err := drainAndClose(resp.Body); err != nil {
+		return wrapExecutionError(
+			failureStageResponseBody,
+			fmt.Errorf("read execute smart contract response: %w", err),
+		)
+	}
 	return nil
+}
+
+func drainAndClose(body io.ReadCloser) error {
+	_, readErr := io.Copy(io.Discard, body)
+	closeErr := body.Close()
+	return errors.Join(readErr, closeErr)
+}
+
+func readAndClose(body io.ReadCloser) ([]byte, error) {
+	content, readErr := io.ReadAll(body)
+	closeErr := body.Close()
+	return content, errors.Join(readErr, closeErr)
 }

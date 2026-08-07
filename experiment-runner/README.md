@@ -12,6 +12,10 @@ Expect frequent updates and changes. Your feedback is appreciated!
 
 ## Overview
 
+Application logs are printed to the terminal and appended to `logs/app.log` in JSON format.
+Unhandled panic and runtime-fatal diagnostics are also copied to that file as plain-text
+Go stack traces.
+
 This project centralizes the experiments that evaluate the [Fabric Network Orchestrator](https://github.com/gca-research-group/hyperledger-fabric-development-network-manager) and the [Jabuti Monitoring System](https://github.com/gca-research-group/jabuti-monitoring-system). It automates the execution of various benchmark scenarios to measure the performance and scalability of Jabuti Monitoring System.
 
 ## Table of contents
@@ -71,6 +75,16 @@ Edit the `.env` file with your specific settings:
 - `SMART_CONTRACT_ID`: The ID of the smart contract to execute.
 - `DATABASE_URL`: PostgreSQL connection string used to export results before each database reset.
 - `EXPERIMENT_OUTPUT_DIR`: Dataset root (defaults to `output/experiments`).
+- `HTTP_MAX_IDLE_CONNS`: Maximum idle connections retained across all API hosts (defaults to `3000`).
+- `HTTP_MAX_IDLE_CONNS_PER_HOST`: Maximum idle connections retained for one API host (defaults to `3000`).
+- `HTTP_IDLE_CONN_TIMEOUT`: How long an idle connection remains reusable (defaults to `90s`).
+- `HTTP_RESPONSE_HEADER_TIMEOUT`: Maximum wait for API response headers (defaults to `15s`).
+- `HTTP_REQUEST_TIMEOUT`: Overall timeout for an API request, including its response body (defaults to `60s`).
+
+The HTTP idle connection limits allow established TCP connections to be reused during
+high-load experiments. They do not limit concurrent or in-flight requests. Connection
+counts must be positive integers, and timeout values use Go duration syntax such as
+`500ms`, `15s`, or `2m`.
 
 ### Running the Experiments
 
@@ -79,6 +93,8 @@ To start the experiment suite, run the following command:
 ```bash
 go run cmd/experiments/main.go
 ```
+
+In scenario configuration files, `maxStartDelay` is expressed in milliseconds.
 
 The system will:
 1. Generate a series of scenarios with varying parameters (events, parallels, consumers).

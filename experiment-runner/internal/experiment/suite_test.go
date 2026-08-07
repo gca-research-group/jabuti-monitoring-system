@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/runner"
 )
@@ -23,9 +24,13 @@ func (f fakeAPI) SetUpConsumers(string, int) error {
 	*f.events = append(*f.events, "consumers")
 	return f.setUpError
 }
-func (f fakeAPI) StopProcessing(string) error {
+func (f fakeAPI) StopRabbitMQ(string) error {
 	*f.events = append(*f.events, "stop")
 	return f.stopError
+}
+
+func (f fakeAPI) ExecuteSmartContract(token string, message api.SmartContractMessage) error {
+	return nil
 }
 
 type fakeInfrastructure struct {
@@ -129,7 +134,7 @@ func TestSuiteLogsExportFailureAndContinuesToFinalReset(t *testing.T) {
 	}
 }
 
-func TestSuiteAbortsWhenStopProcessingFailsWithoutExport(t *testing.T) {
+func TestSuiteAbortsWhenStopRabbitMQFailsWithoutExport(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
 	suite.Client = fakeAPI{events: &events, stopError: errors.New("stop failed")}

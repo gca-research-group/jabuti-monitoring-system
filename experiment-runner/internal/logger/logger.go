@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 )
 
 func Setup() error {
@@ -17,6 +18,10 @@ func Setup() error {
 
 	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
+		return err
+	}
+	if err := debug.SetCrashOutput(file, debug.CrashOptions{}); err != nil {
+		file.Close()
 		return err
 	}
 
