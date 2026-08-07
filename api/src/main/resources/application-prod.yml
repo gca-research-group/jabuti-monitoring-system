@@ -36,12 +36,19 @@ spring:
 
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
-
   rabbitmq:
     host: ${RABBITMQ_HOST}
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USERNAME}
     password: ${RABBITMQ_PASSWORD}
+
+    cache:
+      connection:
+        mode: CONNECTION
+        size: 20
+      channel:
+        size: 500
+        checkout-timeout: 2000ms
 
     listener:
       simple:
@@ -51,6 +58,16 @@ spring:
         prefetch: 20
         acknowledge-mode: auto
 
+  threads:
+    virtual:
+      enabled: true
+
+  cache:
+    type: caffeine
+    cache-names:
+      - apiKeys
+    caffeine:
+      spec: maximumSize=10000,expireAfterWrite=5m,recordStats
 
 logging:
   level:
@@ -58,7 +75,6 @@ logging:
 
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n"
-
 
 jwt:
   secret: ${JWT_SECRET}
@@ -81,9 +97,13 @@ management:
 server:
   tomcat:
     threads:
-      max: 800
-      min-spare: 100
-      accept-count: 1000
-      max-connections: 8192
+      max: 200
+      min-spare: 50
+
+    max-connections: 8192
+    accept-count: 2048
+    keep-alive-timeout: 20s
+    max-keep-alive-requests: 10000
+
     mbeanregistry:
       enabled: true

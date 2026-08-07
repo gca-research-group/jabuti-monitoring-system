@@ -4,17 +4,16 @@ import br.edu.unijui.gca.api.dtos.apikey.ApiKeyDto;
 import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.ApiKeyNotFoundException;
+import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
 import br.edu.unijui.gca.api.repositories.ApiKeyRepository;
 import br.edu.unijui.gca.api.utils.HashUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
-import java.util.HexFormat;
-import java.util.Optional;
-import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
@@ -33,7 +32,7 @@ public class ApiKeyService {
         String secret = generateSecret();
 
         String rawApiKey = buildRawKey(prefix, secret);
-        String hash = HashUtils.sha256(secret);
+        byte[] hash = HashUtils.sha256(secret);
 
         ApiKey apiKey = new ApiKey();
 
@@ -67,14 +66,19 @@ public class ApiKeyService {
         return "jms_" + prefix + "." + secret;
     }
 
-    public Optional<ApiKey> findByKeyPrefix(String keyPrefix) {
-        return repository.findByKeyPrefix(keyPrefix);
+    @Cacheable(
+        cacheNames = "apiKeys",
+        key = "#keyPrefix",
+        sync = true
+    )
+    public ApiKey findByKeyPrefix(String keyPrefix) {
+        return repository.findByKeyPrefix(keyPrefix).orElseThrow(ResourceNotFoundException::new);
     }
 
-    public void validateApiKey(String secret, ApiKey apiKey) {
-        String incomingHash = HashUtils.sha256(secret);
+    public void validateApiKey(String secret, byte[] keyHash) {
+        byte[] incomingHash = HashUtils.sha256(secret);
 
-        if (!MessageDigest.isEqual(HexFormat.of().parseHex(incomingHash), HexFormat.of().parseHex(apiKey.getKeyHash()))) {
+        if (!MessageDigest.isEqual(incomingHash, keyHash)) {
             throw new ApiKeyNotFoundException();
         }
     }

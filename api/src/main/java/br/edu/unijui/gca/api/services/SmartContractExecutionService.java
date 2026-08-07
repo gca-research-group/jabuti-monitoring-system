@@ -6,20 +6,23 @@ import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionD
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
-import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.repositories.SmartContractExecutionRepository;
 import br.edu.unijui.gca.api.specifications.SmartContractExecutionSpecification;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.AmqpTemplate;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class SmartContractExecutionService extends BaseService<
@@ -35,6 +38,8 @@ public class SmartContractExecutionService extends BaseService<
     private final SmartContractExecutionSpecification specification;
 
     private final SmartContractExecutionMapper mapper;
+
+    private final Queue<SmartContractQueueInboundEventDto> queue = new ConcurrentLinkedQueue<>();
 
     @Override
     protected SmartContractExecutionRepository repository() {
@@ -55,25 +60,37 @@ public class SmartContractExecutionService extends BaseService<
         repository.deleteAllInBatch();
     }
 
-    @Async
-    public void execute(SmartContractQueueInboundEventDto event) {
-        var timestamps = new HashMap<SmartContractExecutionEvent, String>();
-        timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+    public UUID execute(SmartContractQueueInboundEventDto event) {
+        var id = UUID.ofEpochMillis(System.currentTimeMillis());
+        event.setId(id);
+        queue.offer(event);
+        return id;
+    }
 
-        SmartContractExecutionDto smartContractExecutionDto = SmartContractExecutionDto.builder()
-                .status(SmartContractExecutionStatus.PENDING)
-                .metadata(event.getMetadata())
-                .timestamps(timestamps)
-                .build();
+    @Scheduled(fixedRate = 5)
+    public void flushToRabbitMQ() {
+        if (queue.isEmpty()) {
+            return;
+        }
 
-        SmartContractExecution smartContractExecution = create(smartContractExecutionDto);
+        int count = 0;
+        SmartContractQueueInboundEventDto event;
 
-        event.setId(smartContractExecution.getId());
+        while (count < 500 && (event = queue.poll()) != null) {
+            var timestamps = new HashMap<SmartContractExecutionEvent, String>();
+            timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+            event.setTimestamps(timestamps);
 
-        amqpTemplate.convertAndSend(
+            amqpTemplate.convertAndSend(
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.INBOUND_ROUTING_KEY,
                 event
-        );
+            );
+            count++;
+        }
+
+        if (count > 0) {
+            log.debug("Flushed {} messages to RabbitMQ. Remaining in queue: {}", count, queue.size());
+        }
     }
 }

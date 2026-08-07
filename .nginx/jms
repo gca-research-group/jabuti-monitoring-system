@@ -1,6 +1,13 @@
+upstream spring_api {
+    server 127.0.0.1:8080;
+    keepalive 256;          # Keep 256 connections hot
+    keepalive_requests 10000; # Allow 10k requests per connection before renewal
+    keepalive_timeout 60s;
+}
+
 server {
-    listen 80;
-    listen [::]:80;
+    listen 80 backlog=4096; # Matches OS listen queue limit
+    listen [::]:80 backlog=4096;
 
     server_name _;
 
@@ -12,14 +19,26 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://localhost:8080/;
+        proxy_pass http://spring_api/;
 
         proxy_http_version 1.1;
-
+        
+        # Explicitly clear header to enable upstream keepalive
+        proxy_set_header Connection ""; 
+        
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Adjust timeouts so fast failures don't pile up in Nginx queues
+        proxy_connect_timeout 2s;
+        proxy_read_timeout 10s;
+        proxy_send_timeout 10s;
+
+        # Turn request buffering ON for small payload throughput
+        proxy_buffering on;
+        proxy_request_buffering on;
     }
 
     location ~* \.(js|css|png|jpg|jpeg|svg|ico|woff2)$ {

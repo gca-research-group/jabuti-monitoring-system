@@ -58,13 +58,9 @@ public class SmartContractQueueExecutionService {
 
             var service = blockchainConnectionFactory.getInstance(blockchain.getPlatform());
 
-            var connectionId = blockchain.getId().toString() + "_" + blockchain.getUpdatedAt().toEpochMilli();
-
-            var connection = service.getConnection(connectionId, parameters);
-
             SmartContract smartContract  = smartContractService.findById(payload.getSmartContractId());
 
-            String result = service.invoke(connection,
+            String result = service.invoke(payload.getBlockchainId(),
                     parameters,
                     smartContract.getName(),
                     payload.getClauseName(),
@@ -81,7 +77,6 @@ public class SmartContractQueueExecutionService {
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.OUTBOUND_ROUTING_KEY,
                 smartContractExecutionMapper.toDto(smartContractExecution));
-
         } catch(Exception exception) {
             timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PROCESSED, OffsetDateTime.now(ZoneOffset.UTC).toString());
             timestamps.put(SmartContractExecutionEvent.OUTBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());

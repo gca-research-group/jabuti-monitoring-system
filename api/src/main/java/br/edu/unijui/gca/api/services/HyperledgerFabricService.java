@@ -24,40 +24,46 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class HyperledgerFabricService implements IBlockchainConnection<Gateway.Builder, HyperledgerFabricConfigDto> {
+public class HyperledgerFabricService implements IBlockchainConnection<Gateway, HyperledgerFabricConfigDto> {
 
-    private final Map<String, Gateway.Builder> connections = new HashMap<>();
+    private final Map<UUID, Gateway> activeGateways = new ConcurrentHashMap<>();
+    private final Map<String, ManagedChannel> activeChannels = new ConcurrentHashMap<>();
 
-    public Gateway.Builder getConnection(String blockchainId, HyperledgerFabricConfigDto parameters) {
-        return connections.computeIfAbsent(blockchainId, id -> connect(parameters));
+    public Gateway getConnection(UUID blockchainId, HyperledgerFabricConfigDto parameters) {
+        return activeGateways.computeIfAbsent(blockchainId, id -> connect(parameters));
     }
 
     @Override
-    public Gateway.Builder connect(HyperledgerFabricConfigDto config) throws BlockchainConnectionException {
+    public Gateway connect(HyperledgerFabricConfigDto config) throws BlockchainConnectionException {
         try {
+
+            ManagedChannel grpcChannel = activeChannels.computeIfAbsent(config.getPeerEndpoint(), endpoint -> {
+                try {
+                    return loadChannel(config);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to initialize gRPC Channel", e);
+                }
+            });
+
             return Gateway.newInstance()
                     .identity(loadIdentity(config))
                     .signer(loadSigner(config))
-                    .evaluateOptions(opts ->
-                            opts.withDeadlineAfter(20, TimeUnit.SECONDS)
-                    )
-                    .endorseOptions(opts ->
-                            opts.withDeadlineAfter(30, TimeUnit.SECONDS)
-                    )
-                    .submitOptions(opts ->
-                            opts.withDeadlineAfter(20, TimeUnit.SECONDS)
-                    )
-                    .commitStatusOptions(opts ->
-                            opts.withDeadlineAfter(120, TimeUnit.SECONDS)
-                    );
+                    .connection(grpcChannel) // Attach long-lived channel
+                    .evaluateOptions(opts -> opts.withDeadlineAfter(20, TimeUnit.SECONDS))
+                    .endorseOptions(opts -> opts.withDeadlineAfter(30, TimeUnit.SECONDS))
+                    .submitOptions(opts -> opts.withDeadlineAfter(20, TimeUnit.SECONDS))
+                    .commitStatusOptions(opts -> opts.withDeadlineAfter(120, TimeUnit.SECONDS))
+                    .connect();
+
         } catch (Exception e) {
             log.error("[HyperledgerFabricService >> connect] {}", e.getMessage());
             throw new BlockchainConnectionException();
@@ -88,25 +94,29 @@ public class HyperledgerFabricService implements IBlockchainConnection<Gateway.B
                 .build();
     }
 
-    public String invoke(Gateway.Builder builder,
+    public String invoke(UUID blockchainId,
                          HyperledgerFabricConfigDto config,
                          String smartContractName,
                          String clauseName,
                          List<SmartContractClauseArgumentDto> clauseArguments
                         ) {
         try {
-            ManagedChannel grpcChannel = loadChannel(config);
+            try {
+                Gateway gateway = getConnection(blockchainId, config);
 
-            try(Gateway gateway = builder.connection(grpcChannel).connect()) {
                 Network network = gateway.getNetwork(config.getChannelName());
                 Contract contract = network.getContract(smartContractName);
-                var values = clauseArguments.stream().map(SmartContractClauseArgumentDto::getValue).toList();
+
+                var values = clauseArguments.stream()
+                        .map(SmartContractClauseArgumentDto::getValue)
+                        .toList();
+
                 byte[] result = contract.submitTransaction(clauseName, values.toArray(new String[0]));
                 return new String(result, StandardCharsets.UTF_8);
+
             } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            } finally {
-                grpcChannel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
+                log.error("[HyperledgerFabricService >> invoke] {}", ex.getMessage());
+                throw new SmartContractInvokeException(ex.getMessage());
             }
         } catch (Exception ex) {
             log.error("[HyperledgerFabricService >> invoke] {}", ex.getMessage());

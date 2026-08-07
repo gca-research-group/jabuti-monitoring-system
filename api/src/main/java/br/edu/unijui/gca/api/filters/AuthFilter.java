@@ -95,10 +95,9 @@ public class AuthFilter extends OncePerRequestFilter {
     private void authenticateApiKey(
             HttpServletRequest request,
             ApiKeyToken token) {
-        ApiKey apiKey = apiKeyService.findByKeyPrefix(token.prefix()).orElseThrow(ResourceNotFoundException::new);
-        apiKeyService.validateApiKey(token.secret(), apiKey);
-        User user = userService.findById(apiKey.getUser().getId());
-        setAuthentication(request, user);
+        ApiKey apiKey = apiKeyService.findByKeyPrefix(token.prefix());
+        apiKeyService.validateApiKey(token.secret(), apiKey.getKeyHash());
+        setAuthentication(request, new User());
     }
 
     private void setAuthentication(HttpServletRequest request, User user) {

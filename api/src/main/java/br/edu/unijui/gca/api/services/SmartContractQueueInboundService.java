@@ -6,6 +6,7 @@ import br.edu.unijui.gca.api.dtos.SmartContractClauseArgumentDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
+import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionDto;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
@@ -46,7 +47,10 @@ public class SmartContractQueueInboundService {
     public void process(SmartContractQueueInboundEventDto event) {
         OffsetDateTime consumedAt = OffsetDateTime.now(ZoneOffset.UTC);
 
-        SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
+        SmartContractExecution smartContractExecution = smartContractExecutionService.create(SmartContractExecutionDto.builder().id(event.getId())
+                .status(SmartContractExecutionStatus.PENDING)
+                .metadata(event.getMetadata())
+                .timestamps(event.getTimestamps()).build());
 
         Map<SmartContractExecutionEvent, String> timestamps = smartContractExecution.getTimestamps();
 

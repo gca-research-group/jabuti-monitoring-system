@@ -14,13 +14,18 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 @Getter
 @Setter
 @Entity
 @EntityListeners(AuditingEntityListener.class)
 @Table(name = "smart_contract_executions")
-public class SmartContractExecution extends BaseUUIDEntity {
+public class SmartContractExecution {
+
+    @Id
+    @Column
+    protected UUID id;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

@@ -1,21 +1,23 @@
 services:
-  jms_rabbitmq:
+  rabbitmq:
     image: rabbitmq:4.1.0-management-alpine
-    container_name: jms_rabbitmq
+    container_name: rabbitmq
     ports:
       - "5672:5672"
       - "15672:15672"
     env_file:
-      - envs/.env.rabbitmq
-    networks:
-      - jms_network
+      - .env
     restart: unless-stopped
     volumes:
-      - jms_rabbitmq_volume:/var/lib/rabbitmq
+      - rabbitmq_volume:/var/lib/rabbitmq
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
 
 volumes:
-  jms_rabbitmq_volume:
-    name: jms_rabbitmq_volume
+  rabbitmq_volume:
+    name: rabbitmq_volume
     driver: local
     driver_opts:
       type: none

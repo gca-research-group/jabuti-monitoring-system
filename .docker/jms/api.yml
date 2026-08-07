@@ -1,22 +1,49 @@
 services:
-
   api:
     image: eclipse-temurin:26-jre
     container_name: api
     restart: unless-stopped
+
     working_dir: /app
+
     volumes:
-      - ./volumes/api/api.jar:/app/api.jar:ro
-    command: [
-        "java",
-        "-XX:+UseContainerSupport",
-        "-XX:MaxRAMPercentage=75.0",
-        "-jar",
-        "api.jar",
-        "--spring.profiles.active=prod"]
+      - ./api.jar:/app/api.jar:ro
+      - ./logs:/app/logs
+
+    command:
+      - java
+      - -Xms4g
+      - -Xmx4g
+      - -XX:+UseG1GC
+      - -XX:MaxGCPauseMillis=20      # Target short GC pause limits
+      - -XX:InitiatingHeapOccupancyPercent=45
+      - -XX:+AlwaysPreTouch          # Pre-allocate heap pages at startup
+      - -XX:+ExitOnOutOfMemoryError
+      - -jar
+      - /app/api.jar
+      - --spring.profiles.active=prod
+
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+
     env_file:
-      - envs/.env.api
-    networks:
-      - jms_network
+      - .env
+
+    mem_limit: 6g
+    mem_reservation: 3g
+    cpus: 4.0
+    pids_limit: 16384
+
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+    init: true
+    stop_grace_period: 60s
+
+    logging:
+      driver: local
+      options:
+        max-size: "100m"
+        max-file: "10"

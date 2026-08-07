@@ -1,15 +1,17 @@
 package br.edu.unijui.gca.api.resources;
 
-import br.edu.unijui.gca.api.services.BenchmarkService;
+import br.edu.unijui.gca.api.services.RabbitMQService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
 @RestController()
-@RequestMapping("/benchmark")
-public class BenchmarkResource {
-    private final BenchmarkService service;
+@RequestMapping("/rabbitmq")
+public class RabbitMQResource {
+    private final RabbitMQService service;
 
     @PostMapping("/start")
     public void start() {

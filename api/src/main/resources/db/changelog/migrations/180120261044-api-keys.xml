@@ -20,11 +20,11 @@
                 <constraints nullable="false"/>
             </column>
 
-            <column name="key_hash" type="char(64)">
+            <column name="key_hash" type="bytea">
                 <constraints nullable="false"/>
             </column>
 
-            <column name="status" type="varchar(255)" defaultValue="PENDING">
+            <column name="status" type="varchar(255)" defaultValue="ACTIVE">
                 <constraints nullable="false"/>
             </column>
 

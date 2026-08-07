@@ -24,7 +24,7 @@ public class ApiKey extends BaseUUIDEntity {
     private String keyPrefix;
 
     @Column(nullable = false, length = 64)
-    private String keyHash;
+    private byte[] keyHash;
 
     @Column
     private boolean status;

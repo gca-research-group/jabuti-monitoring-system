@@ -3,8 +3,10 @@ package br.edu.unijui.gca.api.config;
 import br.edu.unijui.gca.api.filters.AuthFilter;
 import br.edu.unijui.gca.api.handlers.AccessDeniedExceptionHandler;
 import br.edu.unijui.gca.api.handlers.AuthenticationExceptionHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -20,39 +22,45 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     private final AuthFilter authFilter;
 
-    public SecurityConfig(AuthFilter authFilter) {
-        this.authFilter = authFilter;
+    @Bean
+    @Order(1)
+    public SecurityFilterChain highThroughputFilterChain(HttpSecurity http) {
+        http
+            .securityMatcher("/smart-contract-execution/execute")
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+
+        return http.build();
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(
+    @Order(2)
+    public SecurityFilterChain defaultSecurityFilterChain(
             HttpSecurity http,
             AuthenticationExceptionHandler authenticationExceptionHandler,
             AccessDeniedExceptionHandler accessDeniedExceptionHandler
     ) {
-
         http
-                .cors(Customizer.withDefaults())
-                .exceptionHandling(exceptions -> exceptions
-                        .authenticationEntryPoint(authenticationExceptionHandler)
-                        .accessDeniedHandler(accessDeniedExceptionHandler))
-                .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm ->
-                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**", "/images/**", "/actuator/**", "/health/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(
-                        authFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+            .cors(Customizer.withDefaults())
+            .exceptionHandling(exceptions -> exceptions
+                    .authenticationEntryPoint(authenticationExceptionHandler)
+                    .accessDeniedHandler(accessDeniedExceptionHandler))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(sm ->
+                    sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/auth/**", "/images/**", "/actuator/**", "/health/**").permitAll()
+                    .anyRequest().authenticated()
+            )
+            .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -60,19 +68,13 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
         configuration.setAllowedOrigins(List.of("http://localhost:4200"));
-
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
-        UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
-
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
-
         return source;
     }
 

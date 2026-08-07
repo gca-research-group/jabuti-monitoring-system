@@ -41,8 +41,7 @@ public class SmartContractExecutionResource extends BaseResource<
     }
 
     @PostMapping("/execute")
-    public ResponseEntity<Void> execute(@RequestBody SmartContractQueueInboundEventDto dto) {
-        this.service.execute(dto);
-        return ResponseEntity.accepted().build();
+    public UUID execute(@RequestBody SmartContractQueueInboundEventDto dto) {
+        return this.service.execute(dto);
     }
 }

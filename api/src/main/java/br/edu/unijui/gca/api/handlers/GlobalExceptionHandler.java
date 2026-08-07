@@ -4,7 +4,6 @@ import br.edu.unijui.gca.api.dtos.ErrorResponseDto;
 import br.edu.unijui.gca.api.exceptions.ApplicationException;
 import br.edu.unijui.gca.api.exceptions.ExpiredTokenException;
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
-import com.google.api.Http;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

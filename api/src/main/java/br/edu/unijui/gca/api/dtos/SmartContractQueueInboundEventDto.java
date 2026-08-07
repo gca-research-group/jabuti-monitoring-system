@@ -1,5 +1,6 @@
 package br.edu.unijui.gca.api.dtos;
 
+import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,5 +18,6 @@ public class SmartContractQueueInboundEventDto {
     private UUID smartContractId;
     private String clauseName;
     private List<SmartContractClauseArgumentDto> clauseArguments;
+    private Map<SmartContractExecutionEvent, String> timestamps;
     private Map<String, Object> metadata;
 }

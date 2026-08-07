@@ -12,7 +12,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Service
-public class BenchmarkService {
+public class RabbitMQService {
 
     private final RabbitListenerEndpointRegistry registry;
 
@@ -39,6 +39,7 @@ public class BenchmarkService {
     public void consumers(int quantity) {
         for (MessageListenerContainer container : registry.getListenerContainers()) {
             if (container instanceof SimpleMessageListenerContainer simpleContainer) {
+                simpleContainer.setPrefetchCount(250);
                 simpleContainer.setConcurrentConsumers(quantity);
                 simpleContainer.setMaxConcurrentConsumers(quantity);
             }
