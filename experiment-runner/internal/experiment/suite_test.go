@@ -166,7 +166,7 @@ func TestSuiteValidatesDatabaseBeforeInitializeOrReset(t *testing.T) {
 	}
 }
 
-func TestSuiteRunsCompletedRepetitionsWhileSkippingDisabled(t *testing.T) {
+func TestSuiteSkipsCompletedRepetitions(t *testing.T) {
 	var events []string
 	parameters := oneScenarioParameters()
 	parameters.Repetitions = 5
@@ -184,17 +184,17 @@ func TestSuiteRunsCompletedRepetitionsWhileSkippingDisabled(t *testing.T) {
 	if err := suite.Run(parameters); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if len(results.initialized) != 5 {
-		t.Fatalf("initialized scenarios = %d, want 5", len(results.initialized))
+	if len(results.initialized) != 2 {
+		t.Fatalf("initialized scenarios = %d, want 2", len(results.initialized))
 	}
 	for _, scenario := range results.initialized {
-		if scenario.Repetition < 1 || scenario.Repetition > 5 {
+		if scenario.Repetition < 4 || scenario.Repetition > 5 {
 			t.Fatalf("executed completed repetition %d", scenario.Repetition)
 		}
 	}
 }
 
-func TestSuiteCompletedRegistryStillRunsDatabaseAndInfrastructure(t *testing.T) {
+func TestSuiteCompletedRegistryAvoidsDatabaseAndInfrastructure(t *testing.T) {
 	var events []string
 	exporter := &fakeExporter{events: &events}
 	registry := &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{
@@ -203,15 +203,16 @@ func TestSuiteCompletedRegistryStillRunsDatabaseAndInfrastructure(t *testing.T) 
 	suite := validSuite(&events)
 	suite.Exporter = exporter
 	suite.Registry = registry
+	suite.Monitor = fakeMonitor{events: &events}
 
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if exporter.validations != 1 {
-		t.Fatalf("database validations = %d, want 1", exporter.validations)
+	if exporter.validations != 0 {
+		t.Fatalf("database validations = %d, want 0", exporter.validations)
 	}
-	if len(events) == 0 {
-		t.Fatalf("lifecycle events = %v, want execution", events)
+	if len(events) != 0 || len(registry.marks) != 0 {
+		t.Fatalf("lifecycle events/marks = %v/%v, want none", events, registry.marks)
 	}
 }
 

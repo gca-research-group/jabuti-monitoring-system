@@ -68,9 +68,13 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	if err := s.validate(); err != nil {
 		return err
 	}
-	pending, err := s.prepare(parameters)
+	pending, skipped, err := s.prepare(parameters)
 	if err != nil {
 		return err
+	}
+	if len(pending) == 0 {
+		s.Logf("experiment suite completed: executed=0 skipped=%d", skipped)
+		return nil
 	}
 	ctx := context.Background()
 	for index, scenario := range pending {
@@ -81,28 +85,37 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	if err := s.Infrastructure.Reset(); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
 	}
-	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), 0)
+	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
 	return nil
 }
 
-func (s *Suite) prepare(parameters config.Parameters) ([]runner.Scenario, error) {
+func (s *Suite) prepare(parameters config.Parameters) ([]runner.Scenario, int, error) {
 	scenarios := runner.GenerateScenarios(parameters, s.Random)
 	if err := s.Registry.Load(); err != nil {
-		return nil, fmt.Errorf("load successful scenarios: %w", err)
+		return nil, 0, fmt.Errorf("load successful scenarios: %w", err)
 	}
 
-	// Completed repetitions are still executed while scenario skipping is disabled.
-	pending := append(make([]runner.Scenario, 0, len(scenarios)), scenarios...)
+	pending := make([]runner.Scenario, 0, len(scenarios))
+	for _, scenario := range scenarios {
+		if !s.Registry.Contains(scenario.Metadata()) {
+			pending = append(pending, scenario)
+		}
+	}
+	skipped := len(scenarios) - len(pending)
+	s.Logf("experiment schedule: requested=%d skipped=%d pending=%d", len(scenarios), skipped, len(pending))
+	if len(pending) == 0 {
+		return pending, skipped, nil
+	}
 	ctx := context.Background()
 	if err := s.Exporter.Validate(ctx); err != nil {
-		return nil, err
+		return nil, skipped, err
 	}
 
 	if err := s.Results.Initialize(pending); err != nil {
-		return nil, fmt.Errorf("initialize experiment results: %w", err)
+		return nil, skipped, fmt.Errorf("initialize experiment results: %w", err)
 	}
 
-	return pending, nil
+	return pending, skipped, nil
 }
 
 func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index, total int) error {

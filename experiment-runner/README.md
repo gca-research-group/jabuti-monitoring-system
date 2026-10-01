@@ -132,6 +132,22 @@ analysis and do not affect runner control flow. If all configured repetitions ar
 registered, the runner exits without connecting to PostgreSQL or resetting
 infrastructure.
 
+`repetitions` is the total target for each scenario configuration. For example,
+after successfully completing repetitions 1–10, change `repetitions` to `25`
+and run again with the same `EXPERIMENT_OUTPUT_DIR`: only repetitions 11–25
+will execute. Their original numbers remain in `scenarios.csv` and filenames
+such as `0011.parquet` and `0011.resources.parquet`. The new invocation creates
+a fresh execution directory and leaves previous datasets intact.
+
+Completion matches events, lambda, duration, integration processes, maximum
+start delay, consumers, and the repetition number. Generated execution/scenario
+UUIDs and the total repetition target do not affect matching. Changing scenario
+parameters makes those repetitions eligible again. If an interrupted run completed
+only repetitions 2 and 4 out of five, the next invocation executes 1, 3, and 5.
+The registry is authoritative; existing Parquet files alone do not mark a
+repetition complete. Schedule logs report requested, skipped, and pending counts
+across all scenario configurations.
+
 Use only one runner process for a given `EXPERIMENT_OUTPUT_DIR`. The global registry
 uses atomic updates but does not provide cross-process locking.
 
