@@ -39,3 +39,7 @@ func (d *Dataset) Destination(scenario runner.Scenario) string {
 		fmt.Sprintf("%04d.parquet", scenario.Repetition),
 	)
 }
+
+func (d *Dataset) ResourceDestination(s runner.Scenario) string {
+	return filepath.Join(d.runDir, s.ScenarioID, fmt.Sprintf("%04d.resources.parquet", s.Repetition))
+}

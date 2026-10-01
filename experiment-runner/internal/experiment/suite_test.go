@@ -3,6 +3,7 @@ package experiment
 import (
 	"context"
 	"errors"
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/monitoring"
 	"math/rand"
 	"reflect"
 	"strings"
@@ -84,6 +85,8 @@ func (f *fakeResults) Initialize(scenarios []runner.Scenario) error {
 }
 func (f *fakeResults) Destination(runner.Scenario) string { return "events.parquet" }
 
+func (f *fakeResults) ResourceDestination(runner.Scenario) string { return "resources.parquet" }
+
 type fakeRegistry struct {
 	completed map[runner.ScenarioMetadata]struct{}
 	loadErr   error
@@ -108,7 +111,7 @@ func (f *fakeRegistry) MarkSuccessful(metadata runner.ScenarioMetadata) error {
 	return nil
 }
 
-func TestSuiteExportsAfterStopAndBeforeNextReset(t *testing.T) {
+func TestSuiteExportsBeforeNextReset(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
 
@@ -117,7 +120,7 @@ func TestSuiteExportsAfterStopAndBeforeNextReset(t *testing.T) {
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	want := []string{"initialize", "reset", "consumers", "run", "stop", "export", "reset"}
+	want := []string{"initialize", "reset", "consumers", "run", "export", "reset"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -134,16 +137,16 @@ func TestSuiteLogsExportFailureAndContinuesToFinalReset(t *testing.T) {
 	}
 }
 
-func TestSuiteAbortsWhenStopRabbitMQFailsWithoutExport(t *testing.T) {
+func TestSuiteDoesNotStopRabbitMQAfterExecution(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
 	suite.Client = fakeAPI{events: &events, stopError: errors.New("stop failed")}
 
 	err := suite.Run(oneScenarioParameters())
-	if err == nil || !strings.Contains(err.Error(), "stop processing") {
+	if err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	want := []string{"initialize", "reset", "consumers", "run", "stop"}
+	want := []string{"initialize", "reset", "consumers", "run", "export", "reset"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -163,7 +166,7 @@ func TestSuiteValidatesDatabaseBeforeInitializeOrReset(t *testing.T) {
 	}
 }
 
-func TestSuiteSkipsCompletedRepetitionsIndividually(t *testing.T) {
+func TestSuiteRunsCompletedRepetitionsWhileSkippingDisabled(t *testing.T) {
 	var events []string
 	parameters := oneScenarioParameters()
 	parameters.Repetitions = 5
@@ -181,17 +184,17 @@ func TestSuiteSkipsCompletedRepetitionsIndividually(t *testing.T) {
 	if err := suite.Run(parameters); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if len(results.initialized) != 2 {
-		t.Fatalf("initialized scenarios = %d, want 2", len(results.initialized))
+	if len(results.initialized) != 5 {
+		t.Fatalf("initialized scenarios = %d, want 5", len(results.initialized))
 	}
 	for _, scenario := range results.initialized {
-		if scenario.Repetition != 4 && scenario.Repetition != 5 {
+		if scenario.Repetition < 1 || scenario.Repetition > 5 {
 			t.Fatalf("executed completed repetition %d", scenario.Repetition)
 		}
 	}
 }
 
-func TestSuiteAllCompletedSkipsDatabaseAndInfrastructure(t *testing.T) {
+func TestSuiteCompletedRegistryStillRunsDatabaseAndInfrastructure(t *testing.T) {
 	var events []string
 	exporter := &fakeExporter{events: &events}
 	registry := &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{
@@ -204,11 +207,11 @@ func TestSuiteAllCompletedSkipsDatabaseAndInfrastructure(t *testing.T) {
 	if err := suite.Run(oneScenarioParameters()); err != nil {
 		t.Fatalf("Run() error = %v", err)
 	}
-	if exporter.validations != 0 {
-		t.Fatalf("database validations = %d, want 0", exporter.validations)
+	if exporter.validations != 1 {
+		t.Fatalf("database validations = %d, want 1", exporter.validations)
 	}
-	if len(events) != 0 {
-		t.Fatalf("lifecycle events = %v, want none", events)
+	if len(events) == 0 {
+		t.Fatalf("lifecycle events = %v, want execution", events)
 	}
 }
 
@@ -249,7 +252,7 @@ func TestSuiteRegistryWriteFailureAbortsBeforeFinalReset(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "record successful scenario") {
 		t.Fatalf("Run() error = %v", err)
 	}
-	want := []string{"initialize", "reset", "consumers", "run", "stop", "export"}
+	want := []string{"initialize", "reset", "consumers", "run", "export"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -307,5 +310,60 @@ func oneScenarioParameters() config.Parameters {
 		Lambda:               0.5,
 		Duration:             1,
 		Repetitions:          1,
+	}
+}
+
+type fakeMonitor struct {
+	events            *[]string
+	startErr, stopErr error
+}
+
+func (m fakeMonitor) Start(context.Context, runner.Scenario, string) (monitoring.Session, error) {
+	*m.events = append(*m.events, "monitor-start")
+	if m.startErr != nil {
+		return nil, m.startErr
+	}
+	return m, nil
+}
+func (m fakeMonitor) Stop(context.Context) (monitoring.Summary, error) {
+	*m.events = append(*m.events, "monitor-stop")
+	return monitoring.Summary{}, m.stopErr
+}
+func TestSuiteMonitoringLifecycle(t *testing.T) {
+	for _, mode := range []string{"ok", "start failure", "stop failure", "export failure"} {
+		t.Run(mode, func(t *testing.T) {
+			var events []string
+			s := validSuite(&events)
+			m := fakeMonitor{events: &events}
+			registry := &fakeRegistry{}
+			s.Registry = registry
+			if mode == "start failure" {
+				m.startErr = errors.New("preflight")
+			}
+			if mode == "stop failure" {
+				m.stopErr = errors.New("publication")
+			}
+			if mode == "export failure" {
+				s.Exporter = &fakeExporter{events: &events, exportErr: errors.New("export")}
+			}
+			s.Monitor = m
+			err := s.Run(oneScenarioParameters())
+			if (err == nil) != (mode == "ok") {
+				t.Fatalf("error: %v", err)
+			}
+			want := []string{"initialize", "reset", "consumers", "monitor-start"}
+			if mode != "start failure" {
+				want = append(want, "run", "monitor-stop", "export")
+			}
+			if mode == "ok" {
+				want = append(want, "reset")
+			}
+			if !reflect.DeepEqual(events, want) {
+				t.Fatalf("events %v want %v", events, want)
+			}
+			if (len(registry.marks) == 1) != (mode == "ok") {
+				t.Fatal("incorrect completion")
+			}
+		})
 	}
 }

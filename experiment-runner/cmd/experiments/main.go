@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/monitoring"
 	"log"
 	"log/slog"
 	"math/rand"
@@ -64,5 +65,12 @@ func run() error {
 		Random:         random,
 	}
 
+	if env.ResourceMonitoringEnabled {
+		suite.Monitor = &monitoring.Monitor{Interval: env.ResourceSampleInterval, Timeout: env.ResourceSampleTimeout, Factory: monitoring.SSHFactory(env.ResourceDockerSocket), Targets: []monitoring.Target{
+			{Component: "producer", Host: env.APIProducerSSHServer, User: env.APIProducerSSHUser, Port: env.APIProducerSSHPort, Container: env.ResourceProducerContainer},
+			{Component: "consumer", Host: env.APIConsumerSSHServer, User: env.APIConsumerSSHUser, Port: env.APIConsumerSSHPort, Container: env.ResourceConsumerContainer},
+			{Component: "rabbitmq", Host: env.RabbitMQServerIP, User: env.RabbitMQSSHUser, Port: env.RabbitMQSSHPort, Container: env.ResourceRabbitMQContainer},
+		}}
+	}
 	return suite.Run(*parameters)
 }

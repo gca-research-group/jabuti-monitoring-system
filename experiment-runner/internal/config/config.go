@@ -12,6 +12,13 @@ import (
 )
 
 type Env struct {
+	ResourceMonitoringEnabled bool
+	ResourceSampleInterval    time.Duration
+	ResourceSampleTimeout     time.Duration
+	ResourceProducerContainer string
+	ResourceConsumerContainer string
+	ResourceRabbitMQContainer string
+	ResourceDockerSocket      string
 	BaseURL                   string
 	ApiKey                    string
 	DatabaseURL               string
@@ -57,6 +64,29 @@ type Parameters struct {
 func LoadEnv() (*Env, error) {
 	loadDotEnv(".env")
 
+	enabled, err := strconv.ParseBool(getEnv("RESOURCE_MONITORING_ENABLED", "false"))
+	if err != nil {
+		return nil, fmt.Errorf("RESOURCE_MONITORING_ENABLED must be a boolean")
+	}
+	interval, err := getPositiveDurationEnv("RESOURCE_SAMPLE_INTERVAL", time.Second)
+	if err != nil {
+		return nil, err
+	}
+	timeout, err := getPositiveDurationEnv("RESOURCE_SAMPLE_TIMEOUT", 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	producer := getEnv("RESOURCE_PRODUCER_CONTAINER", "api-producer")
+	consumer := getEnv("RESOURCE_CONSUMER_CONTAINER", "api-consumer")
+	rabbit := getEnv("RESOURCE_RABBITMQ_CONTAINER", "rabbitmq")
+	socket := getEnv("RESOURCE_DOCKER_SOCKET", "/var/run/docker.sock")
+	if enabled {
+		for name, value := range map[string]string{"RESOURCE_PRODUCER_CONTAINER": producer, "RESOURCE_CONSUMER_CONTAINER": consumer, "RESOURCE_RABBITMQ_CONTAINER": rabbit, "RESOURCE_DOCKER_SOCKET": socket, "RABBITMQ_SERVER_IP": getEnv("RABBITMQ_SERVER_IP", "")} {
+			if strings.TrimSpace(value) == "" {
+				return nil, fmt.Errorf("%s is required for resource monitoring", name)
+			}
+		}
+	}
 	httpMaxIdleConns, err := getPositiveIntEnv("HTTP_MAX_IDLE_CONNS", 3000)
 	if err != nil {
 		return nil, err
@@ -90,6 +120,7 @@ func LoadEnv() (*Env, error) {
 	}
 
 	return &Env{
+		ResourceMonitoringEnabled: enabled, ResourceSampleInterval: interval, ResourceSampleTimeout: timeout, ResourceProducerContainer: producer, ResourceConsumerContainer: consumer, ResourceRabbitMQContainer: rabbit, ResourceDockerSocket: socket,
 		BaseURL:              getEnv("API_BASE_URL", "http://localhost:8080"),
 		ApiKey:               getEnv("API_KEY", ""),
 		DatabaseURL:          getEnv("DATABASE_URL", ""),

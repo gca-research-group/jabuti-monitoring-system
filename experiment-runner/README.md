@@ -140,7 +140,7 @@ DuckDB can query all repetitions in one execution:
 ```sql
 SELECT *
 FROM read_parquet(
-  'output/experiments/<execution-uuid>/*/*.parquet',
+  'output/experiments/<execution-uuid>/*/[0-9][0-9][0-9][0-9].parquet',
   filename = true
 );
 ```
@@ -151,7 +151,7 @@ Polars can scan the same dataset lazily:
 import polars as pl
 
 events = pl.scan_parquet(
-    "output/experiments/<execution-uuid>/*/*.parquet",
+    "output/experiments/<execution-uuid>/*/[0-9][0-9][0-9][0-9].parquet",
     include_file_paths="source_file",
 )
 ```
@@ -185,3 +185,67 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Contact
 
 For any questions or issues, please open an issue on GitHub or contact the maintainers.
+
+## Container resource monitoring
+
+Set `RESOURCE_MONITORING_ENABLED=true` to collect producer, consumer and RabbitMQ
+container statistics. Defaults are a 1s interval and 5s request timeout. Configure
+`RESOURCE_SAMPLE_INTERVAL`, `RESOURCE_SAMPLE_TIMEOUT`, `RESOURCE_PRODUCER_CONTAINER`
+(default `api-producer`), `RESOURCE_CONSUMER_CONTAINER` (`api-consumer`),
+`RESOURCE_RABBITMQ_CONTAINER` (`rabbitmq`), and `RESOURCE_DOCKER_SOCKET`
+(`/var/run/docker.sock`). Existing host/user/port settings and the infrastructure
+SSH private key are reused. Hosts must run Linux Docker API >=1.41, allow SSH
+Unix socket forwarding, and grant the SSH user access to the Docker socket.
+The monitoring connections are separate from reset connections.
+
+Each repetition publishes `<execution-uuid>/<scenario-uuid>/0001.resources.parquet`
+next to `0001.parquet`. Resource rows are written incrementally with Zstandard
+compression. File metadata contains schema version, sampling interval and UTC
+window boundaries. Startup verifies all running containers and primes CPU counters;
+initial memory rows ensure short executions have observations. Collection stops
+when the executor returns, including HTTP request completion. It does not wait for
+RabbitMQ queue drainage. Preflight failures abort before workload generation;
+sampling failures produce error rows and retry on the next tick. Publication
+failures prevent successful registration, while event export is still attempted.
+
+CPU uses consecutive successful counters and Docker's online logical CPU count:
+`container_delta / host_delta * cpu_count * 100`. 100% means one fully occupied
+logical CPU; multicore usage can exceed 100%. Invalid baselines and reset counters
+produce null CPU. Total memory includes cache; working set subtracts
+`total_inactive_file` on cgroup v1 or `inactive_file` on v2. Missing or inconsistent
+cache counters produce null working set. Docker's memory limit can represent host
+memory when no container limit is configured. Rows have `ok`, `partial`, or `error`
+status; missing measurements are null, never fabricated zeroes. Sampled peaks can
+miss spikes shorter than the interval. These are container metrics, not server
+usage or JVM heap statistics.
+
+Query event and resource schemas separately. Numeric event filenames can be
+selected with `*/[0-9][0-9][0-9][0-9].parquet`; resources use
+`*/*.resources.parquet`.
+
+```sql
+SELECT scenario_id, repetition, component,
+       avg(cpu_percent) AS avg_cpu, max(cpu_percent) AS peak_cpu,
+       avg(memory_working_set_bytes) AS avg_ram,
+       max(memory_working_set_bytes) AS peak_ram,
+       count(*) FILTER (WHERE sample_status = 'error') AS errors
+FROM read_parquet('output/experiments/<execution-uuid>/*/*.resources.parquet')
+GROUP BY scenario_id, repetition, component;
+```
+
+```python
+resources = pl.scan_parquet(
+    'output/experiments/<execution-uuid>/*/*.resources.parquet'
+)
+summary = resources.group_by(['scenario_id', 'repetition', 'component']).agg(
+    pl.col('cpu_percent').mean().alias('avg_cpu'),
+    pl.col('cpu_percent').max().alias('peak_cpu'),
+    pl.col('memory_working_set_bytes').mean().alias('avg_ram'),
+    pl.col('memory_working_set_bytes').max().alias('peak_ram'),
+)
+```
+
+Before production experiments, validate on disposable Linux Docker/SSH hosts,
+compare samples against Docker statistics, exercise unavailable containers, and
+compare repeated enabled/disabled throughput and latency. Real-host acceptance
+requires the configured experiment infrastructure.

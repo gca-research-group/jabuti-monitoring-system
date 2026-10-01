@@ -192,3 +192,25 @@ func TestLoadEnvRejectsInvalidHTTPConfiguration(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceConfiguration(t *testing.T) {
+	t.Setenv("RESOURCE_MONITORING_ENABLED", "false")
+	e, err := LoadEnv()
+	if err != nil || e.ResourceMonitoringEnabled || e.ResourceSampleInterval != time.Second || e.ResourceSampleTimeout != 5*time.Second {
+		t.Fatalf("defaults: %+v %v", e, err)
+	}
+	for name, value := range map[string]string{"RESOURCE_MONITORING_ENABLED": "invalid", "RESOURCE_SAMPLE_INTERVAL": "0s", "RESOURCE_SAMPLE_TIMEOUT": "-1s"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(name, value)
+			if _, err := LoadEnv(); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+	t.Setenv("RESOURCE_MONITORING_ENABLED", "true")
+	t.Setenv("RABBITMQ_SERVER_IP", "host")
+	t.Setenv("RESOURCE_PRODUCER_CONTAINER", "")
+	if _, err := LoadEnv(); err == nil {
+		t.Fatal("empty enabled target accepted")
+	}
+}

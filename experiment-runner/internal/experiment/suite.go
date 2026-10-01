@@ -2,10 +2,13 @@ package experiment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
+
+	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/monitoring"
 
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
@@ -34,6 +37,7 @@ type ScenarioExecutor interface {
 type ExperimentResults interface {
 	Initialize(scenarios []runner.Scenario) error
 	Destination(scenario runner.Scenario) string
+	ResourceDestination(scenario runner.Scenario) string
 }
 
 type SuccessRegistry interface {
@@ -42,7 +46,12 @@ type SuccessRegistry interface {
 	MarkSuccessful(metadata runner.ScenarioMetadata) error
 }
 
+type ResourceMonitor interface {
+	Start(context.Context, runner.Scenario, string) (monitoring.Session, error)
+}
+
 type Suite struct {
+	Monitor        ResourceMonitor
 	Client         APIClient
 	Infrastructure Infrastructure
 	Executor       ScenarioExecutor
@@ -112,13 +121,44 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		}
 
 		s.Sleep(10 * time.Second)
-		s.Executor.Run(scenario)
+		var session monitoring.Session
+		if s.Monitor != nil {
+			var err error
+			session, err = s.Monitor.Start(ctx, scenario, s.Results.ResourceDestination(scenario))
+			if err != nil {
+				return fmt.Errorf("start resource monitoring: %w", err)
+			}
+		}
+		var monitoringErr error
+		func() {
+			if session != nil {
+				defer func() {
+					summary, err := session.Stop(context.Background())
+					monitoringErr = err
+					for component, counts := range summary.Components {
+						s.Logf("resource monitoring component=%s samples=%d errors=%d partial=%d output=%s", component, counts.Samples, counts.Errors, counts.Partial, summary.Destination)
+						if counts.Errors > 0 {
+							s.Logf("warning: incomplete resource coverage for %s", component)
+						}
+					}
+				}()
+			}
+			s.Executor.Run(scenario)
+		}()
 
 		destination := s.Results.Destination(scenario)
 		exportErr := s.Exporter.Export(ctx, scenario, destination)
 
 		if exportErr != nil {
 			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
+		}
+
+		if monitoringErr != nil {
+			return fmt.Errorf("finalize resource monitoring: %w", errors.Join(monitoringErr, exportErr))
+		}
+
+		if s.Monitor != nil && exportErr != nil {
+			return exportErr
 		}
 
 		if exportErr == nil {
