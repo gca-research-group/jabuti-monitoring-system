@@ -11,7 +11,7 @@ spring:
     password: ${DATABASE_PASSWORD}
 
     hikari:
-      maximum-pool-size: 20
+      maximum-pool-size: 60
       minimum-idle: 10
       connection-timeout: 30000
       idle-timeout: 600000
@@ -43,20 +43,18 @@ spring:
     password: ${RABBITMQ_PASSWORD}
 
     cache:
-      connection:
-        mode: CONNECTION
-        size: 20
       channel:
+        mode: CHANNEL
         size: 500
         checkout-timeout: 2000ms
 
-    listener:
-      simple:
-        default-requeue-rejected: false
-        concurrency: 20
-        max-concurrency: 20
-        prefetch: 20
-        acknowledge-mode: auto
+    # listener:
+    #   simple:
+    #     default-requeue-rejected: false
+    #     concurrency: 20
+    #     max-concurrency: 20
+    #     prefetch: 20
+    #     acknowledge-mode: auto
 
   threads:
     virtual:
@@ -98,12 +96,12 @@ server:
   tomcat:
     threads:
       max: 200
-      min-spare: 50
+      min-spare: 20
 
-    max-connections: 8192
+    max-connections: 40000
     accept-count: 2048
-    keep-alive-timeout: 20s
-    max-keep-alive-requests: 10000
+    keep-alive-timeout: 2s
+    max-keep-alive-requests: 1000
 
     mbeanregistry:
       enabled: true

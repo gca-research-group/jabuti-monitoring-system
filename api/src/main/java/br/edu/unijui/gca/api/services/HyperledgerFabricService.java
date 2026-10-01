@@ -101,25 +101,19 @@ public class HyperledgerFabricService implements IBlockchainConnection<Gateway, 
                          List<SmartContractClauseArgumentDto> clauseArguments
                         ) {
         try {
-            try {
-                Gateway gateway = getConnection(blockchainId, config);
+            Gateway gateway = getConnection(blockchainId, config);
 
-                Network network = gateway.getNetwork(config.getChannelName());
-                Contract contract = network.getContract(smartContractName);
+            Network network = gateway.getNetwork(config.getChannelName());
+            Contract contract = network.getContract(smartContractName);
 
-                var values = clauseArguments.stream()
-                        .map(SmartContractClauseArgumentDto::getValue)
-                        .toList();
+            var values = clauseArguments.stream()
+                    .map(SmartContractClauseArgumentDto::getValue)
+                    .toList();
 
-                byte[] result = contract.submitTransaction(clauseName, values.toArray(new String[0]));
-                return new String(result, StandardCharsets.UTF_8);
-
-            } catch (Exception ex) {
-                log.error("[HyperledgerFabricService >> invoke] {}", ex.getMessage());
-                throw new SmartContractInvokeException(ex.getMessage());
-            }
+            byte[] result = contract.submitTransaction(clauseName, values.toArray(new String[0]));
+            return new String(result, StandardCharsets.UTF_8);
         } catch (Exception ex) {
-            log.error("[HyperledgerFabricService >> invoke] {}", ex.getMessage());
+            log.error("[HyperledgerFabricService >> invoke] Invocation failed", ex);
             throw new SmartContractInvokeException(ex.getMessage());
         }
     }

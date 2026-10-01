@@ -10,6 +10,7 @@ import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +24,7 @@ import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 
+@Profile("consumer")
 @RequiredArgsConstructor
 @Slf4j
 @Component

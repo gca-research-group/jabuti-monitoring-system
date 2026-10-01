@@ -12,7 +12,6 @@ import br.edu.unijui.gca.api.specifications.SmartContractExecutionSpecification;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.AmqpTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
@@ -21,6 +20,7 @@ import java.util.HashMap;
 import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
 
 @Slf4j
 @RequiredArgsConstructor
@@ -63,34 +63,17 @@ public class SmartContractExecutionService extends BaseService<
     public UUID execute(SmartContractQueueInboundEventDto event) {
         var id = UUID.ofEpochMillis(System.currentTimeMillis());
         event.setId(id);
-        queue.offer(event);
-        return id;
-    }
 
-    @Scheduled(fixedRate = 5)
-    public void flushToRabbitMQ() {
-        if (queue.isEmpty()) {
-            return;
-        }
+        var timestamps = new HashMap<SmartContractExecutionEvent, String>();
+        timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
+        event.setTimestamps(timestamps);
 
-        int count = 0;
-        SmartContractQueueInboundEventDto event;
-
-        while (count < 500 && (event = queue.poll()) != null) {
-            var timestamps = new HashMap<SmartContractExecutionEvent, String>();
-            timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
-            event.setTimestamps(timestamps);
-
-            amqpTemplate.convertAndSend(
+        amqpTemplate.convertAndSend(
                 QueueNames.MAIN_EXCHANGE,
                 QueueNames.INBOUND_ROUTING_KEY,
                 event
-            );
-            count++;
-        }
+        );
 
-        if (count > 0) {
-            log.debug("Flushed {} messages to RabbitMQ. Remaining in queue: {}", count, queue.size());
-        }
+        return id;
     }
 }

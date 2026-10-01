@@ -1,37 +1,41 @@
 services:
-  api:
+  # -------------------------------------------------------------
+  # 1. PRODUCER (HTTP Ingestion Engine)
+  # Active Profiles: prod, producer
+  # -------------------------------------------------------------
+  api-producer:
     image: eclipse-temurin:26-jre
-    container_name: api
+    container_name: api-producer
     restart: unless-stopped
-
     working_dir: /app
 
     volumes:
       - ./api.jar:/app/api.jar:ro
-      - ./logs:/app/logs
+      - ./logs/producer:/app/logs
 
+    # Combines prod + producer profiles
     command:
       - java
-      - -Xms4g
-      - -Xmx4g
+      - -Xms2g
+      - -Xmx2g
       - -XX:+UseG1GC
-      - -XX:MaxGCPauseMillis=20      # Target short GC pause limits
+      - -XX:MaxGCPauseMillis=20
       - -XX:InitiatingHeapOccupancyPercent=45
-      - -XX:+AlwaysPreTouch          # Pre-allocate heap pages at startup
+      - -XX:+AlwaysPreTouch
       - -XX:+ExitOnOutOfMemoryError
       - -jar
       - /app/api.jar
-      - --spring.profiles.active=prod
+      - --spring.profiles.active=prod,producer
 
     ports:
-      - "127.0.0.1:8080:8080"
+      - "0.0.0.0:8080:8080"  # Exposes HTTP to Nginx/Load Balancer
 
     env_file:
       - .env
 
-    mem_limit: 6g
-    mem_reservation: 3g
-    cpus: 4.0
+    mem_limit: 3g
+    mem_reservation: 2g
+    cpus: 3                 # Give more CPU to handle 1,500 RPS HTTP ingestion
     pids_limit: 16384
 
     ulimits:
@@ -41,7 +45,55 @@ services:
 
     init: true
     stop_grace_period: 60s
+    logging:
+      driver: local
+      options:
+        max-size: "100m"
+        max-file: "10"
 
+  # -------------------------------------------------------------
+  # 2. CONSUMER (Background Queue Worker)
+  # Active Profiles: prod, consumer
+  # -------------------------------------------------------------
+  api-consumer:
+    image: eclipse-temurin:26-jre
+    container_name: api-consumer
+    restart: unless-stopped
+    working_dir: /app
+
+    volumes:
+      - ./api.jar:/app/api.jar:ro
+      - ./logs/consumer:/app/logs
+
+    # Combines prod + consumer profiles
+    command:
+      - java
+      - -Xms1g
+      - -Xmx1g
+      - -XX:+UseG1GC
+      - -XX:+AlwaysPreTouch
+      - -XX:+ExitOnOutOfMemoryError
+      - -jar
+      - /app/api.jar
+      - --spring.profiles.active=prod,consumer
+
+    # NO PORTS EXPOSED! (It does not run an HTTP server)
+
+    env_file:
+      - .env
+
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 1               # Dedicated CPU for queue processing
+    pids_limit: 16384
+
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+    init: true
+    stop_grace_period: 60s
     logging:
       driver: local
       options:

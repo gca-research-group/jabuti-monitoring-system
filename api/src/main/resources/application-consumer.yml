@@ -1,0 +1,16 @@
+# Settings specific ONLY to the Background Consumer worker node
+server:
+  port: -1
+
+spring:
+  liquibase:
+    enabled: false
+
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false
+        concurrency: 20
+        max-concurrency: 20
+        prefetch: 20
+        acknowledge-mode: auto

@@ -39,7 +39,7 @@ public class RabbitMQService {
     public void consumers(int quantity) {
         for (MessageListenerContainer container : registry.getListenerContainers()) {
             if (container instanceof SimpleMessageListenerContainer simpleContainer) {
-                simpleContainer.setPrefetchCount(250);
+                simpleContainer.setPrefetchCount(20);
                 simpleContainer.setConcurrentConsumers(quantity);
                 simpleContainer.setMaxConcurrentConsumers(quantity);
             }
