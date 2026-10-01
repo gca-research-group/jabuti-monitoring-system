@@ -49,7 +49,7 @@ func (e *Executor) RunPrepared(s Scenario) error {
 	if err := (config.Parameters{Duration: s.Duration, WarmupDuration: s.WarmupDuration}).ValidateTiming(); err != nil {
 		return err
 	}
-	if s.Window.MeasurementStartedAt.Sub(s.Window.WorkloadStartedAt) != time.Duration(s.WarmupDuration)*time.Second || s.Window.MeasurementEndedAt.Sub(s.Window.MeasurementStartedAt) != time.Duration(s.Duration)*time.Second {
+	if s.Window.MeasurementStartedAt.Sub(s.Window.WorkloadStartedAt) != time.Duration(s.WarmupDuration)*time.Millisecond || s.Window.MeasurementEndedAt.Sub(s.Window.MeasurementStartedAt) != time.Duration(s.Duration)*time.Millisecond {
 		return fmt.Errorf("window does not match scenario durations")
 	}
 	// Preserve a monotonic clock anchor while accounting for collection startup.
@@ -58,8 +58,8 @@ func (e *Executor) RunPrepared(s Scenario) error {
 	end := anchor.Add(s.Window.MeasurementEndedAt.Sub(s.Window.WorkloadStartedAt))
 	var requests sync.WaitGroup
 	counters := &requestCounters{failures: make(map[string]uint64)}
-	for second := 0; second < s.WarmupDuration+s.Duration; second++ {
-		bucket := anchor.Add(time.Duration(second) * time.Second)
+	for offset := time.Duration(0); offset < end.Sub(anchor); offset += time.Second {
+		bucket := anchor.Add(offset)
 		e.waitUntil(bucket)
 		if !e.now().Before(end) {
 			break
@@ -70,7 +70,7 @@ func (e *Executor) RunPrepared(s Scenario) error {
 		for process := 0; process < s.IntegrationProcesses; process++ {
 			for _, interval := range e.generateEvents(s.Events, s.Lambda) {
 				deadline := bucket.Add(interval)
-				if deadline.Before(e.now()) {
+				if !deadline.Before(end) || deadline.Before(e.now()) {
 					continue
 				}
 				requests.Add(1)

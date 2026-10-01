@@ -51,6 +51,7 @@ type Env struct {
 	HTTPRequestTimeout        time.Duration
 }
 
+// Parameters expresses all scenario durations and start delays in milliseconds.
 type Parameters struct {
 	WarmupDuration       int     `json:"warmupDuration"`
 	Events               []int   `json:"events"`

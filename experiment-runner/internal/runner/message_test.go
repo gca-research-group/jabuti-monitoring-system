@@ -13,7 +13,7 @@ func TestBuildMessagePreservesScenarioMetadata(t *testing.T) {
 		ScenarioID:           "scenario",
 		Events:               5,
 		Lambda:               0.5,
-		Duration:             10,
+		Duration:             10000,
 		IntegrationProcesses: 2,
 		MaxStartDelay:        3,
 		Consumers:            4,

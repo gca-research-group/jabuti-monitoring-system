@@ -101,7 +101,9 @@ To start the experiment suite, run the following command:
 go run cmd/experiments/main.go
 ```
 
-In scenario configuration files, `maxStartDelay` is expressed in milliseconds.
+In scenario configuration files, `duration`, `warmupDuration`, and `maxStartDelay` are expressed in milliseconds.
+Convert existing `duration` and `warmupDuration` values by multiplying by 1000
+(for example, 300 seconds becomes `300000`). Event rates remain events per second.
 
 The system will:
 1. Generate a series of scenarios with varying parameters (events, parallels, consumers).
@@ -268,7 +270,7 @@ requires the configured experiment infrastructure.
 
 ## Warm-up and measurement windows
 
-Scenario configuration accepts `warmupDuration` in integer seconds. It defaults
+Scenario configuration accepts `warmupDuration` in integer milliseconds. It defaults
 to zero. `duration` is the measurement duration and must be positive; warm-up
 must be nonnegative, and their sum must fit Go's time duration range.
 
@@ -278,8 +280,8 @@ must be nonnegative, and their sum must fit Go's time duration range.
   "integrationProcesses": [2],
   "consumers": [2],
   "lambda": 0.5,
-  "warmupDuration": 30,
-  "duration": 120,
+  "warmupDuration": 30000,
+  "duration": 120000,
   "maxStartDelay": 300,
   "repetitions": 10
 }
@@ -293,13 +295,14 @@ start the workload together after their delays finish. Warm-up uses the same
 load as measurement, without a traffic pause, reset, or queue clear between them.
 Late scheduling slots are skipped instead of sent as catch-up bursts, so actual
 submitted counts can be below `events * integrationProcesses *
-(warmupDuration + duration)`.
+(warmupDuration + duration) / 1000`.
 
-Both event and resource Parquet schemas are version 2 and include:
+Both event and resource Parquet schemas are version 3 and include:
 
 | Column | Meaning |
 | --- | --- |
-| `warmup_duration` | Configured warm-up seconds |
+| `duration` (events) | Configured measurement milliseconds |
+| `warmup_duration` | Configured warm-up milliseconds |
 | `workload_started_at` | Shared logical start of warm-up traffic |
 | `measurement_started_at` | Workload start plus warm-up duration |
 | `measurement_ended_at` | Measurement start plus measurement duration |
@@ -336,7 +339,8 @@ SELECT execution_id, scenario_id, repetition,
        count(*) FILTER (
          WHERE outbound_queue_processed >= measurement_started_at
            AND outbound_queue_processed < measurement_ended_at
-       )::DOUBLE / max(duration) AS completed_events_per_second
+       )::DOUBLE / epoch(max(measurement_ended_at) - max(measurement_started_at))
+         AS completed_events_per_second
 FROM events
 WHERE measurement_started_at IS NOT NULL
 GROUP BY execution_id, scenario_id, repetition;
@@ -379,7 +383,10 @@ container statistics, not instantaneous measurements.
 
 Historical files remain untouched. DuckDB `union_by_name = true` exposes missing
 new columns as null; exclude those rows from window-based analysis rather than
-inferring their timing. Warm-up duration and timing protocol version 2 are part
-of completion-registry identity. Legacy entries load as protocol 0 and do not
+inferring their timing. Schema version 2 stores durations in seconds; version 3
+stores milliseconds. The throughput query uses timestamps to handle either unit.
+Warm-up duration and timing protocol version 3 are part
+of completion-registry identity. Legacy entries load as protocol 0;
+protocol 0 and 2 entries do not
 skip new runs, even when warm-up is zero. Existing repetitions will therefore
 run again under the new timing protocol.

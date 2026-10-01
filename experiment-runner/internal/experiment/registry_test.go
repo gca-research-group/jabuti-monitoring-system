@@ -102,7 +102,7 @@ func registryTestMetadata() runner.ScenarioMetadata {
 	return runner.ScenarioMetadata{
 		Events:               10,
 		Lambda:               0.5,
-		Duration:             300,
+		Duration:             300000,
 		IntegrationProcesses: 2,
 		MaxStartDelay:        1,
 		Consumers:            4,
@@ -125,7 +125,7 @@ func TestRegistryLoadsLegacyTimingWithoutSkippingNewProtocol(t *testing.T) {
 		t.Fatal(old)
 	}
 	current := old
-	current.TimingProtocolVersion = 2
+	current.TimingProtocolVersion = 3
 	if r.Contains(current) {
 		t.Fatal("legacy skipped current protocol")
 	}

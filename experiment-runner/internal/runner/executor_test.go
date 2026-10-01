@@ -44,7 +44,7 @@ func TestExecutorCompletesWhenEventDispatchFails(t *testing.T) {
 	executor.Run(Scenario{
 		Events:               1,
 		Lambda:               0.5,
-		Duration:             1,
+		Duration:             1000,
 		IntegrationProcesses: 1,
 		MaxStartDelay:        3,
 	})
@@ -102,7 +102,7 @@ func TestExecutorLogsScenarioRequestSummary(t *testing.T) {
 		Repetition:           2,
 		Events:               2,
 		Lambda:               0.5,
-		Duration:             2,
+		Duration:             2000,
 		IntegrationProcesses: 2,
 	})
 
@@ -132,7 +132,7 @@ func TestExecutorOmitsFailureTableWhenEveryRequestSucceeds(t *testing.T) {
 		Repetition:           1,
 		Events:               1,
 		Lambda:               0.5,
-		Duration:             1,
+		Duration:             1000,
 		IntegrationProcesses: 1,
 	})
 

@@ -7,7 +7,7 @@ import (
 )
 
 func (p Parameters) ValidateTiming() error {
-	limit := int64(math.MaxInt64) / int64(time.Second)
+	limit := int64(math.MaxInt64) / int64(time.Millisecond)
 	if p.WarmupDuration < 0 || p.Duration <= 0 {
 		return fmt.Errorf("warmupDuration must be nonnegative and duration must be positive")
 	}

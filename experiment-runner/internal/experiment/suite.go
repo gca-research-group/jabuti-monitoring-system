@@ -125,7 +125,7 @@ func (s *Suite) prepare(parameters config.Parameters) ([]runner.Scenario, int, e
 
 func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index, total int) error {
 	s.Logf(
-		"preparing scenario %d/%d: scenario_id=%s repetition=%d events_per_second=%d duration=%ds integration_processes=%d consumers=%d",
+		"preparing scenario %d/%d: scenario_id=%s repetition=%d events_per_second=%d duration=%dms integration_processes=%d consumers=%d",
 		index+1,
 		total,
 		scenario.ScenarioID,

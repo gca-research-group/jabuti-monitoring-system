@@ -13,7 +13,7 @@ func TestGenerateScenariosBuildsAllCombinations(t *testing.T) {
 		IntegrationProcesses: []int{1, 3},
 		Consumers:            []int{1, 5},
 		Lambda:               0.5,
-		Duration:             10,
+		Duration:             10000,
 		MaxStartDelay:        2,
 		Repetitions:          2,
 	}
@@ -45,7 +45,7 @@ func TestGenerateScenariosBuildsAllCombinations(t *testing.T) {
 func TestScenarioMetadataIgnoresGeneratedIDsAndUsesEveryStableField(t *testing.T) {
 	first := Scenario{
 		ExecutionID: "execution-1", ScenarioID: "scenario-1",
-		Events: 10, Lambda: 0.5, Duration: 300, IntegrationProcesses: 2,
+		Events: 10, Lambda: 0.5, Duration: 300000, IntegrationProcesses: 2,
 		MaxStartDelay: 1, Consumers: 4, Repetition: 3,
 	}
 	second := first

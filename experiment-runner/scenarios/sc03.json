@@ -3,7 +3,8 @@
   "integrationProcesses": [3],
   "consumers": [450],
   "lambda": 0.5,
-  "duration": 60,
-  "maxStartDelay": 300,
+  "duration": 60000,
+  "maxStartDelay": 120,
+  "warmupDuration": 30000,
   "repetitions": 1
 }

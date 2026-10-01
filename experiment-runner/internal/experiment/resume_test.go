@@ -230,7 +230,7 @@ func TestSuiteSharesWindowAndRerunsLegacyProtocol(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
 	parameters := oneScenarioParameters()
-	parameters.WarmupDuration = 30
+	parameters.WarmupDuration = 30000
 	executor := &recordingExecutor{}
 	exporter := &recordingExporter{fakeExporter: fakeExporter{events: &events}}
 	var monitoringWindow runner.RunWindow
@@ -247,7 +247,7 @@ func TestSuiteSharesWindowAndRerunsLegacyProtocol(t *testing.T) {
 	if len(executor.scenarios) != 1 || len(exporter.scenarios) != 1 {
 		t.Fatal("legacy entry suppressed new run")
 	}
-	expected := runner.NewRunWindow(suite.Now(), 30, 1)
+	expected := runner.NewRunWindow(suite.Now(), 30000, 1000)
 	if executor.scenarios[0].Window != expected || exporter.scenarios[0].Window != expected || monitoringWindow != expected {
 		t.Fatal("different windows across subsystems")
 	}

@@ -120,7 +120,7 @@ func (m *Monitor) Start(ctx context.Context, scenario runner.Scenario, destinati
 	if window.WorkloadStartedAt.IsZero() {
 		duration := scenario.Duration
 		if duration <= 0 {
-			duration = 1
+			duration = 1000
 		}
 		clock := m.Clock
 		if clock == nil {
@@ -194,7 +194,7 @@ func (m *Monitor) preflightTarget(ctx context.Context, scenario runner.Scenario,
 
 func (m *Monitor) resourceWriter(file *os.File, clock Clock) *parquet.GenericWriter[Sample] {
 	writer := parquet.NewGenericWriter[Sample](file, parquet.Compression(&zstd.Codec{}), parquet.MaxRowsPerRowGroup(128))
-	writer.SetKeyValueMetadata("schema_version", "2")
+	writer.SetKeyValueMetadata("schema_version", "3")
 	writer.SetKeyValueMetadata("sample_interval", m.Interval.String())
 	writer.SetKeyValueMetadata("window_start", clock.Now().Format(time.RFC3339Nano))
 	return writer

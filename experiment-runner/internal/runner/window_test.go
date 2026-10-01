@@ -11,17 +11,17 @@ import (
 
 func TestWindowAndStableWarmupIdentity(t *testing.T) {
 	start := time.Date(2026, 10, 1, 10, 0, 0, 123456789, time.FixedZone("test", -10800))
-	w := NewRunWindow(start, 30, 120)
+	w := NewRunWindow(start, 30000, 120000)
 	if w.Validate() != nil || w.WorkloadStartedAt.Location() != time.UTC || w.WorkloadStartedAt.Nanosecond() != 123456000 || w.MeasurementStartedAt.Sub(w.WorkloadStartedAt) != 30*time.Second || w.MeasurementEndedAt.Sub(w.MeasurementStartedAt) != 120*time.Second {
 		t.Fatal(w)
 	}
-	s := GenerateScenarios(config.Parameters{Events: []int{1}, IntegrationProcesses: []int{1}, Consumers: []int{1}, Repetitions: 1, Duration: 120, WarmupDuration: 30}, rand.New(rand.NewSource(1)))[0]
+	s := GenerateScenarios(config.Parameters{Events: []int{1}, IntegrationProcesses: []int{1}, Consumers: []int{1}, Repetitions: 1, Duration: 120000, WarmupDuration: 30000}, rand.New(rand.NewSource(1)))[0]
 	original := s.Metadata()
 	s.Window = w
-	if s.Metadata() != original || original.WarmupDuration != 30 || original.TimingProtocolVersion != 2 {
+	if s.Metadata() != original || original.WarmupDuration != 30000 || original.TimingProtocolVersion != 3 {
 		t.Fatal(s)
 	}
-	if BuildMessage(&config.Env{}, s).Metadata["WarmupDuration"] != 30 {
+	if BuildMessage(&config.Env{}, s).Metadata["WarmupDuration"] != 30000 {
 		t.Fatal("missing request warmup")
 	}
 	s.WarmupDuration++
@@ -32,6 +32,41 @@ func TestWindowAndStableWarmupIdentity(t *testing.T) {
 
 type clockedClient struct{ call func() }
 
+func TestMillisecondSchedulingCutoff(t *testing.T) {
+	for _, duration := range []int{250, 1250} {
+		start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+		s := Scenario{Events: 10, Lambda: 0.5, IntegrationProcesses: 1, Duration: duration, Window: NewRunWindow(start, 0, duration)}
+		if got := s.Window.MeasurementEndedAt.Sub(start); got != time.Duration(duration)*time.Millisecond {
+			t.Fatalf("window duration = %v", got)
+		}
+		want := 0
+		random := rand.New(rand.NewSource(1))
+		for offset := time.Duration(0); offset < time.Duration(duration)*time.Millisecond; offset += time.Second {
+			for _, interval := range GenerateExponentialEvents(s.Events, s.Lambda, random) {
+				if start.Add(offset + interval).Before(s.Window.MeasurementEndedAt) {
+					want++
+				}
+			}
+		}
+		var mu sync.Mutex
+		calls := 0
+		e := NewExecutor(clockedClient{func() { mu.Lock(); calls++; mu.Unlock() }}, &config.Env{}, "", rand.New(rand.NewSource(1)))
+		e.Now = func() time.Time { return start }
+		e.WaitUntil = func(deadline time.Time) {
+			if deadline.After(s.Window.MeasurementEndedAt) {
+				t.Errorf("deadline %v exceeds cutoff %v", deadline, s.Window.MeasurementEndedAt)
+			}
+		}
+		e.Logf = func(string, ...any) {}
+		if err := e.RunPrepared(s); err != nil {
+			t.Fatal(err)
+		}
+		if calls != want {
+			t.Fatalf("duration %dms: calls = %d, want %d", duration, calls, want)
+		}
+	}
+}
+
 func (c clockedClient) ExecuteSmartContract(string, api.SmartContractMessage) error {
 	c.call()
 	return nil
@@ -41,7 +76,7 @@ func (c clockedClient) ExecuteSmartContract(string, api.SmartContractMessage) er
 // wait releases only after each expected request has reached the client.
 func TestContinuousWarmupSchedulingAndHTTPDrain(t *testing.T) {
 	start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-	s := Scenario{Events: 1, Lambda: 0.5, IntegrationProcesses: 2, WarmupDuration: 1, Duration: 2, MaxStartDelay: 10, Window: NewRunWindow(start, 1, 2)}
+	s := Scenario{Events: 1, Lambda: 0.5, IntegrationProcesses: 2, WarmupDuration: 1000, Duration: 2000, MaxStartDelay: 10, Window: NewRunWindow(start, 1000, 2000)}
 	var mu sync.Mutex
 	var deadlines []time.Time
 	var delays int
@@ -107,7 +142,7 @@ func TestDeadlineDispatchAndLateBucketSkipping(t *testing.T) {
 	for _, mode := range []string{"expired dispatch", "late buckets"} {
 		t.Run(mode, func(t *testing.T) {
 			start := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
-			s := Scenario{Events: 1, Lambda: 0.5, IntegrationProcesses: 1, Duration: 3, Window: NewRunWindow(start, 0, 3)}
+			s := Scenario{Events: 1, Lambda: 0.5, IntegrationProcesses: 1, Duration: 3000, Window: NewRunWindow(start, 0, 3000)}
 			var mu sync.Mutex
 			now := start
 			calls := 0
@@ -148,7 +183,7 @@ func TestPreparationWaitsForEveryProcess(t *testing.T) {
 	done := make(chan error, 1)
 	e := NewExecutor(clockedClient{func() { t.Error("dispatched in preparation") }}, &config.Env{}, "", rand.New(rand.NewSource(1)))
 	e.Sleep = func(time.Duration) { entered <- struct{}{}; <-release }
-	go func() { done <- e.Prepare(Scenario{Duration: 1, IntegrationProcesses: 2}) }()
+	go func() { done <- e.Prepare(Scenario{Duration: 1000, IntegrationProcesses: 2}) }()
 	for i := 0; i < 2; i++ {
 		select {
 		case <-entered:

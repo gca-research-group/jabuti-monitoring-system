@@ -15,7 +15,7 @@ func TestTimingConfiguration(t *testing.T) {
 	if p.WarmupDuration != 0 || p.ValidateTiming() != nil {
 		t.Fatal(p)
 	}
-	limit := int(math.MaxInt64 / int64(time.Second))
+	limit := int(math.MaxInt64 / int64(time.Millisecond))
 	for _, tt := range []struct {
 		warmup, duration int
 		valid            bool

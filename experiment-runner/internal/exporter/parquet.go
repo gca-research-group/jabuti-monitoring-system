@@ -116,7 +116,7 @@ func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, 
 	}
 	defer rows.Close()
 
-	events := make([]Event, 0, scenario.Events*scenario.Duration*scenario.IntegrationProcesses)
+	events := make([]Event, 0, scenario.Events*(scenario.Duration/1000)*scenario.IntegrationProcesses)
 	for rows.Next() {
 		event, scanErr := scanEvent(rows)
 		if scanErr != nil {
@@ -193,7 +193,7 @@ func writeAtomic(destination string, events []Event, window runner.RunWindow) (e
 	}()
 
 	writer := parquet.NewGenericWriter[Event](temp, parquet.Compression(&zstd.Codec{}))
-	writer.SetKeyValueMetadata("schema_version", "2")
+	writer.SetKeyValueMetadata("schema_version", "3")
 	for key, value := range window.Metadata() {
 		writer.SetKeyValueMetadata(key, value)
 	}

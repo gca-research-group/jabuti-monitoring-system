@@ -21,8 +21,8 @@ func (w RunWindow) Validate() error {
 
 func NewRunWindow(start time.Time, warmup, duration int) RunWindow {
 	start = start.UTC().Truncate(time.Microsecond)
-	measurement := start.Add(time.Duration(warmup) * time.Second)
-	return RunWindow{start, measurement, measurement.Add(time.Duration(duration) * time.Second)}
+	measurement := start.Add(time.Duration(warmup) * time.Millisecond)
+	return RunWindow{start, measurement, measurement.Add(time.Duration(duration) * time.Millisecond)}
 }
 
 func (w RunWindow) Metadata() map[string]string {

@@ -36,7 +36,7 @@ type ScenarioMetadata struct {
 func (s Scenario) Metadata() ScenarioMetadata {
 	return ScenarioMetadata{
 		WarmupDuration:        s.WarmupDuration,
-		TimingProtocolVersion: 2,
+		TimingProtocolVersion: 3,
 		Events:                s.Events,
 		Lambda:                s.Lambda,
 		Duration:              s.Duration,

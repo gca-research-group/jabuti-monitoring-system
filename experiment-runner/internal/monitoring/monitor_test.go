@@ -272,7 +272,7 @@ func TestPreparationAndWindowPersistence(t *testing.T) {
 	docker := &fakeDocker{}
 	m := Monitor{Targets: []Target{{Component: "producer", Container: "api"}}, Interval: time.Hour, Timeout: time.Second, Factory: func(context.Context, Target) (Docker, error) { return docker, nil }}
 	path := filepath.Join(t.TempDir(), "resources.parquet")
-	scenario := runner.Scenario{WarmupDuration: 30, Duration: 120}
+	scenario := runner.Scenario{WarmupDuration: 30000, Duration: 120000}
 	prepared, err := m.Prepare(context.Background(), scenario, path)
 	if err != nil {
 		t.Fatal(err)
@@ -286,7 +286,7 @@ func TestPreparationAndWindowPersistence(t *testing.T) {
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		t.Fatal("published before collection")
 	}
-	window := runner.NewRunWindow(time.Now().Add(time.Second), 30, 120)
+	window := runner.NewRunWindow(time.Now().Add(time.Second), 30000, 120000)
 	session := prepared.Begin(window)
 	if _, err := session.Stop(context.Background()); err != nil {
 		t.Fatal(err)
@@ -299,7 +299,7 @@ func TestPreparationAndWindowPersistence(t *testing.T) {
 		t.Fatal(rows)
 	}
 	row := rows[0]
-	if !row.WorkloadStartedAt.Equal(window.WorkloadStartedAt) || !row.MeasurementStartedAt.Equal(window.MeasurementStartedAt) || !row.MeasurementEndedAt.Equal(window.MeasurementEndedAt) || row.WarmupDuration != 30 {
+	if !row.WorkloadStartedAt.Equal(window.WorkloadStartedAt) || !row.MeasurementStartedAt.Equal(window.MeasurementStartedAt) || !row.MeasurementEndedAt.Equal(window.MeasurementEndedAt) || row.WarmupDuration != 30000 {
 		t.Fatal(row)
 	}
 	if !row.Timestamp.Before(row.WorkloadStartedAt) {
@@ -320,7 +320,7 @@ func TestPreparationAndWindowPersistence(t *testing.T) {
 			t.Fatalf("%s = %q", key, got)
 		}
 	}
-	if v, _ := pf.Lookup("schema_version"); v != "2" {
+	if v, _ := pf.Lookup("schema_version"); v != "3" {
 		t.Fatal(v)
 	}
 }

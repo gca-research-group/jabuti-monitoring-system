@@ -22,7 +22,7 @@ func TestExportUsesBoundIdentifiersAndWritesTypedParquet(t *testing.T) {
 	}
 	defer db.Close()
 
-	scenario := runner.Scenario{ExecutionID: "execution", ScenarioID: "scenario", Repetition: 3, WarmupDuration: 30, Window: runner.NewRunWindow(time.Now(), 30, 300)}
+	scenario := runner.Scenario{ExecutionID: "execution", ScenarioID: "scenario", Repetition: 3, WarmupDuration: 30000, Window: runner.NewRunWindow(time.Now(), 30000, 300000)}
 	created := time.Date(2026, 7, 30, 10, 0, 0, 0, time.FixedZone("test", -3*60*60))
 	columns := []string{
 		"event_id", "status", "execution_id", "scenario_id", "consumers", "duration", "events",
@@ -68,7 +68,7 @@ func TestExportUsesBoundIdentifiersAndWritesTypedParquet(t *testing.T) {
 	if events[0].EventID != "event" || events[0].InboundQueueConsumed != nil {
 		t.Fatalf("event = %#v", events[0])
 	}
-	if !events[0].WorkloadStartedAt.Equal(scenario.Window.WorkloadStartedAt) || !events[0].MeasurementStartedAt.Equal(scenario.Window.MeasurementStartedAt) || !events[0].MeasurementEndedAt.Equal(scenario.Window.MeasurementEndedAt) || events[0].WarmupDuration != 30 {
+	if !events[0].WorkloadStartedAt.Equal(scenario.Window.WorkloadStartedAt) || !events[0].MeasurementStartedAt.Equal(scenario.Window.MeasurementStartedAt) || !events[0].MeasurementEndedAt.Equal(scenario.Window.MeasurementEndedAt) || events[0].WarmupDuration != 30000 {
 		t.Fatal("lost event boundaries")
 	}
 	for key, value := range scenario.Window.Metadata() {
@@ -88,7 +88,7 @@ func TestWriteAtomicRemovesTemporaryFileOnPublishFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := writeAtomic(destination, []Event{{EventID: "event", CreatedAt: time.Now()}}, runner.NewRunWindow(time.Now(), 0, 1))
+	err := writeAtomic(destination, []Event{{EventID: "event", CreatedAt: time.Now()}}, runner.NewRunWindow(time.Now(), 0, 1000))
 	if err == nil {
 		t.Fatal("writeAtomic() error = nil")
 	}
@@ -114,7 +114,7 @@ func TestEmptyEventFilePreservesWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	window := runner.NewRunWindow(time.Date(2026, 10, 1, 10, 0, 0, 999999999, time.UTC), 30, 120)
+	window := runner.NewRunWindow(time.Date(2026, 10, 1, 10, 0, 0, 999999999, time.UTC), 30000, 120000)
 	scenario := runner.Scenario{ExecutionID: "e", ScenarioID: "s", Repetition: 1, Window: window}
 	mock.ExpectQuery(regexp.QuoteMeta(executionQuery)).WithArgs("e", "s", 1).WillReturnRows(sqlmock.NewRows([]string{"event_id"}))
 	path := filepath.Join(t.TempDir(), "empty.parquet")

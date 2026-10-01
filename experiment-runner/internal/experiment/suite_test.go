@@ -179,7 +179,7 @@ func TestSuiteSkipsCompletedRepetitions(t *testing.T) {
 	registry := &fakeRegistry{completed: make(map[runner.ScenarioMetadata]struct{})}
 	for repetition := 1; repetition <= 3; repetition++ {
 		registry.completed[runner.ScenarioMetadata{
-			TimingProtocolVersion: 2, Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: repetition,
+			TimingProtocolVersion: 3, Events: 1, Lambda: 0.5, Duration: 1000, IntegrationProcesses: 1, Consumers: 1, Repetition: repetition,
 		}] = struct{}{}
 	}
 	suite := validSuite(&events)
@@ -203,7 +203,7 @@ func TestSuiteCompletedRegistryAvoidsDatabaseAndInfrastructure(t *testing.T) {
 	var events []string
 	exporter := &fakeExporter{events: &events}
 	registry := &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{
-		{TimingProtocolVersion: 2, Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: 1}: {},
+		{TimingProtocolVersion: 3, Events: 1, Lambda: 0.5, Duration: 1000, IntegrationProcesses: 1, Consumers: 1, Repetition: 1}: {},
 	}}
 	suite := validSuite(&events)
 	suite.Exporter = exporter
@@ -314,7 +314,7 @@ func oneScenarioParameters() config.Parameters {
 		IntegrationProcesses: []int{1},
 		Consumers:            []int{1},
 		Lambda:               0.5,
-		Duration:             1,
+		Duration:             1000,
 		Repetitions:          1,
 	}
 }
