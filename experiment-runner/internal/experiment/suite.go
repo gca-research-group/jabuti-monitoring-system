@@ -68,119 +68,142 @@ func (s *Suite) Run(parameters config.Parameters) error {
 	if err := s.validate(); err != nil {
 		return err
 	}
-
-	scenarios := runner.GenerateScenarios(parameters, s.Random)
-	if err := s.Registry.Load(); err != nil {
-		return fmt.Errorf("load successful scenarios: %w", err)
-	}
-
-	pending := make([]runner.Scenario, 0, len(scenarios))
-	for _, scenario := range scenarios {
-		// if s.Registry.Contains(scenario.Metadata()) {
-		// 	continue
-		// }
-		pending = append(pending, scenario)
-	}
-	skipped := 0
-	//skipped := len(scenarios) - len(pending)
-	// if skipped > 0 {
-	// 	s.Logf("skipping %d previously completed scenario repetitions", skipped)
-	// }
-	// if len(pending) == 0 {
-	// 	s.Logf("all configured scenario repetitions have already completed successfully")
-	// 	return nil
-	// }
-
-	ctx := context.Background()
-	if err := s.Exporter.Validate(ctx); err != nil {
+	pending, err := s.prepare(parameters)
+	if err != nil {
 		return err
 	}
-	if err := s.Results.Initialize(pending); err != nil {
-		return fmt.Errorf("initialize experiment results: %w", err)
-	}
-
+	ctx := context.Background()
 	for index, scenario := range pending {
-		s.Logf(
-			"preparing scenario %d/%d: scenario_id=%s repetition=%d events_per_second=%d duration=%ds integration_processes=%d consumers=%d",
-			index+1,
-			len(pending),
-			scenario.ScenarioID,
-			scenario.Repetition,
-			scenario.Events,
-			scenario.Duration,
-			scenario.IntegrationProcesses,
-			scenario.Consumers,
-		)
-
-		if err := s.Infrastructure.Reset(); err != nil {
-			return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
-		}
-
-		if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
-			return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
-		}
-
-		s.Sleep(10 * time.Second)
-		var session monitoring.Session
-		if s.Monitor != nil {
-			var err error
-			session, err = s.Monitor.Start(ctx, scenario, s.Results.ResourceDestination(scenario))
-			if err != nil {
-				return fmt.Errorf("start resource monitoring: %w", err)
-			}
-		}
-		var monitoringErr error
-		func() {
-			if session != nil {
-				defer func() {
-					summary, err := session.Stop(context.Background())
-					monitoringErr = err
-					for component, counts := range summary.Components {
-						s.Logf("resource monitoring component=%s samples=%d errors=%d partial=%d output=%s", component, counts.Samples, counts.Errors, counts.Partial, summary.Destination)
-						if counts.Errors > 0 {
-							s.Logf("warning: incomplete resource coverage for %s", component)
-						}
-					}
-				}()
-			}
-			s.Executor.Run(scenario)
-		}()
-
-		destination := s.Results.Destination(scenario)
-		exportErr := s.Exporter.Export(ctx, scenario, destination)
-
-		if exportErr != nil {
-			s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
-		}
-
-		if monitoringErr != nil {
-			return fmt.Errorf("finalize resource monitoring: %w", errors.Join(monitoringErr, exportErr))
-		}
-
-		if s.Monitor != nil && exportErr != nil {
-			return exportErr
-		}
-
-		if exportErr == nil {
-			if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
-				return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
-			}
-
-			s.Logf(
-				"completed scenario %d/%d: scenario_id=%s repetition=%d results=%s",
-				index+1,
-				len(pending),
-				scenario.ScenarioID,
-				scenario.Repetition,
-				destination,
-			)
+		if err := s.runScenario(ctx, scenario, index, len(pending)); err != nil {
+			return err
 		}
 	}
-
 	if err := s.Infrastructure.Reset(); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
 	}
-	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
+	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), 0)
+	return nil
+}
+
+func (s *Suite) prepare(parameters config.Parameters) ([]runner.Scenario, error) {
+	scenarios := runner.GenerateScenarios(parameters, s.Random)
+	if err := s.Registry.Load(); err != nil {
+		return nil, fmt.Errorf("load successful scenarios: %w", err)
+	}
+
+	// Completed repetitions are still executed while scenario skipping is disabled.
+	pending := append(make([]runner.Scenario, 0, len(scenarios)), scenarios...)
+	ctx := context.Background()
+	if err := s.Exporter.Validate(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := s.Results.Initialize(pending); err != nil {
+		return nil, fmt.Errorf("initialize experiment results: %w", err)
+	}
+
+	return pending, nil
+}
+
+func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index, total int) error {
+	s.Logf(
+		"preparing scenario %d/%d: scenario_id=%s repetition=%d events_per_second=%d duration=%ds integration_processes=%d consumers=%d",
+		index+1,
+		total,
+		scenario.ScenarioID,
+		scenario.Repetition,
+		scenario.Events,
+		scenario.Duration,
+		scenario.IntegrationProcesses,
+		scenario.Consumers,
+	)
+
+	if err := s.Infrastructure.Reset(); err != nil {
+		return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
+	}
+
+	if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
+		return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
+	}
+
+	s.Sleep(10 * time.Second)
+	session, err := s.startMonitoring(ctx, scenario)
+	if err != nil {
+		return err
+	}
+
+	monitoringErr := s.executeScenario(scenario, session)
+	return s.exportScenario(ctx, scenario, index, total, monitoringErr)
+}
+
+func (s *Suite) startMonitoring(ctx context.Context, scenario runner.Scenario) (monitoring.Session, error) {
+	if s.Monitor == nil {
+		return nil, nil
+	}
+
+	session, err := s.Monitor.Start(ctx, scenario, s.Results.ResourceDestination(scenario))
+
+	if err != nil {
+		return nil, fmt.Errorf("start resource monitoring: %w", err)
+	}
+
+	return session, nil
+}
+
+func (s *Suite) executeScenario(scenario runner.Scenario, session monitoring.Session) (monitoringErr error) {
+	if session != nil {
+		defer func() {
+			summary, err := session.Stop(context.Background())
+			monitoringErr = err
+			s.logMonitoringSummary(summary)
+		}()
+	}
+
+	s.Executor.Run(scenario)
+
+	return monitoringErr
+}
+
+func (s *Suite) logMonitoringSummary(summary monitoring.Summary) {
+	for component, counts := range summary.Components {
+		s.Logf("resource monitoring component=%s samples=%d errors=%d partial=%d output=%s", component, counts.Samples, counts.Errors, counts.Partial, summary.Destination)
+		if counts.Errors > 0 {
+			s.Logf("warning: incomplete resource coverage for %s", component)
+		}
+	}
+}
+
+func (s *Suite) exportScenario(ctx context.Context, scenario runner.Scenario, index, total int, monitoringErr error) error {
+	destination := s.Results.Destination(scenario)
+	exportErr := s.Exporter.Export(ctx, scenario, destination)
+
+	if exportErr != nil {
+		s.Logf("failed to export scenario %s repetition %d: %v", scenario.ScenarioID, scenario.Repetition, exportErr)
+	}
+
+	if monitoringErr != nil {
+		return fmt.Errorf("finalize resource monitoring: %w", errors.Join(monitoringErr, exportErr))
+	}
+
+	if s.Monitor != nil && exportErr != nil {
+		return exportErr
+	}
+
+	if exportErr == nil {
+		if err := s.Registry.MarkSuccessful(scenario.Metadata()); err != nil {
+			return fmt.Errorf("record successful scenario %s repetition %d: %w", scenario.ScenarioID, scenario.Repetition, err)
+		}
+
+		s.Logf(
+			"completed scenario %d/%d: scenario_id=%s repetition=%d results=%s",
+			index+1,
+			total,
+			scenario.ScenarioID,
+			scenario.Repetition,
+			destination,
+		)
+	}
+
 	return nil
 }
 

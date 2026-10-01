@@ -39,93 +39,137 @@ type remoteDocker struct {
 
 func SSHFactory(socket string) Factory {
 	return func(ctx context.Context, t Target) (Docker, error) {
-		settings := infrastructure.NewSSHClient()
-		key, err := os.ReadFile(settings.PrivateKeyPath)
+		config, err := dockerSSHConfig(t)
 		if err != nil {
 			return nil, err
 		}
-		signer, err := ssh.ParsePrivateKey(key)
+		client, err := connectDockerSSH(ctx, t, config)
 		if err != nil {
 			return nil, err
 		}
-		conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(t.Host, t.Port))
+		d := &remoteDocker{ssh: client}
+		forwardingTimeout, err := dockerForwardingTimeout(ctx)
 		if err != nil {
+			d.ssh.Close()
 			return nil, err
 		}
-		if deadline, ok := ctx.Deadline(); ok {
-			conn.SetDeadline(deadline)
-		}
-		finished := make(chan struct{})
-		go func() {
-			select {
-			case <-ctx.Done():
-				conn.Close()
-			case <-finished:
-			}
-		}()
-		cc, ch, rq, err := ssh.NewClientConn(conn, net.JoinHostPort(t.Host, t.Port), &ssh.ClientConfig{User: t.User, Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)}, HostKeyCallback: settings.HostKeyCallback})
-		close(finished)
-		if err != nil {
-			conn.Close()
-			return nil, err
-		}
-		conn.SetDeadline(time.Time{})
-		d := &remoteDocker{ssh: ssh.NewClient(cc, ch, rq)}
-		forwardingTimeout := 5 * time.Second
-		if deadline, ok := ctx.Deadline(); ok {
-			forwardingTimeout = time.Until(deadline)
-			if forwardingTimeout <= 0 {
-				d.ssh.Close()
-				return nil, context.DeadlineExceeded
-			}
-		}
-		d.transport = &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			ctx, cancel := context.WithTimeout(ctx, forwardingTimeout)
-			defer cancel()
-			// SSH streamlocal channel requests have no context API. Closing this dedicated
-			// connection bounds a blocked forwarding request and permits next-tick recovery.
-			done := make(chan struct{})
-			go func() {
-				select {
-				case <-ctx.Done():
-					d.ssh.Close()
-				case <-done:
-				}
-			}()
-			c, e := d.ssh.Dial("unix", socket)
-			close(done)
-			return c, e
-		}}
+		d.transport = dockerTransport(d.ssh, socket, forwardingTimeout)
 		d.http = &http.Client{Transport: d.transport}
-		var version struct {
-			APIVersion    string `json:"ApiVersion"`
-			MinAPIVersion string `json:"MinAPIVersion"`
-			OS            string `json:"Os"`
-		}
-		if err = d.get(ctx, "/version", &version); err != nil {
+		if err := d.negotiateVersion(ctx); err != nil {
 			d.Close()
-			return nil, fmt.Errorf("check Docker socket permissions and SSH Unix forwarding: %w", err)
+			return nil, err
 		}
-		minor, e := strconv.Atoi(trimVersion(version.APIVersion))
-		if e != nil || minor < 41 || version.OS != "linux" {
-			d.Close()
-			return nil, fmt.Errorf("Linux Docker API >=1.41 required, got %s on %s", version.APIVersion, version.OS)
-		}
-		selected := 41
-		if version.MinAPIVersion != "" {
-			minimum, e := strconv.Atoi(trimVersion(version.MinAPIVersion))
-			if e != nil || minimum > minor {
-				d.Close()
-				return nil, fmt.Errorf("invalid Docker minimum API version %s", version.MinAPIVersion)
-			}
-			if minimum > selected {
-				selected = minimum
-			}
-		}
-		d.version = fmt.Sprintf("/v1.%d", selected)
 		return d, nil
 	}
 }
+
+func dockerSSHConfig(t Target) (*ssh.ClientConfig, error) {
+	settings := infrastructure.NewSSHClient()
+	key, err := os.ReadFile(settings.PrivateKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+	return &ssh.ClientConfig{User: t.User, Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)}, HostKeyCallback: settings.HostKeyCallback}, nil
+}
+
+func connectDockerSSH(ctx context.Context, t Target, config *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(t.Host, t.Port))
+	if err != nil {
+		return nil, err
+	}
+	if deadline, ok := ctx.Deadline(); ok {
+		conn.SetDeadline(deadline)
+	}
+	finished := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			conn.Close()
+		case <-finished:
+		}
+	}()
+	cc, ch, rq, err := ssh.NewClientConn(conn, net.JoinHostPort(t.Host, t.Port), config)
+	close(finished)
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	conn.SetDeadline(time.Time{})
+	return ssh.NewClient(cc, ch, rq), nil
+}
+
+func dockerForwardingTimeout(ctx context.Context) (time.Duration, error) {
+	timeout := 5 * time.Second
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = time.Until(deadline)
+		if timeout <= 0 {
+			return 0, context.DeadlineExceeded
+		}
+	}
+	return timeout, nil
+}
+
+func dockerTransport(client *ssh.Client, socket string, forwardingTimeout time.Duration) *http.Transport {
+	return &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(ctx, forwardingTimeout)
+		defer cancel()
+		// SSH streamlocal channel requests have no context API. Closing this dedicated
+		// connection bounds a blocked forwarding request and permits next-tick recovery.
+		done := make(chan struct{})
+		go func() {
+			select {
+			case <-ctx.Done():
+				client.Close()
+			case <-done:
+			}
+		}()
+		c, e := client.Dial("unix", socket)
+		close(done)
+		return c, e
+	}}
+}
+
+type dockerVersion struct {
+	APIVersion    string `json:"ApiVersion"`
+	MinAPIVersion string `json:"MinAPIVersion"`
+	OS            string `json:"Os"`
+}
+
+func (d *remoteDocker) negotiateVersion(ctx context.Context) error {
+	var version dockerVersion
+	if err := d.get(ctx, "/version", &version); err != nil {
+		return fmt.Errorf("check Docker socket permissions and SSH Unix forwarding: %w", err)
+	}
+	selected, err := selectDockerVersion(version)
+	if err != nil {
+		return err
+	}
+	d.version = selected
+	return nil
+}
+
+func selectDockerVersion(version dockerVersion) (string, error) {
+	minor, e := strconv.Atoi(trimVersion(version.APIVersion))
+	if e != nil || minor < 41 || version.OS != "linux" {
+		return "", fmt.Errorf("Linux Docker API >=1.41 required, got %s on %s", version.APIVersion, version.OS)
+	}
+	selected := 41
+	if version.MinAPIVersion != "" {
+		minimum, e := strconv.Atoi(trimVersion(version.MinAPIVersion))
+		if e != nil || minimum > minor {
+			return "", fmt.Errorf("invalid Docker minimum API version %s", version.MinAPIVersion)
+		}
+		if minimum > selected {
+			selected = minimum
+		}
+	}
+	return fmt.Sprintf("/v1.%d", selected), nil
+}
+
 func trimVersion(v string) string {
 	if len(v) > 2 && v[:2] == "1." {
 		return v[2:]

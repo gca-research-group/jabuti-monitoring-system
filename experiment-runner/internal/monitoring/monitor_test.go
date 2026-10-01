@@ -154,6 +154,57 @@ func TestSessionRoundTripAndStop(t *testing.T) {
 
 type blockedDocker struct{ fakeDocker }
 
+type preflightDocker struct {
+	fakeDocker
+	resolveErr, statsErr error
+}
+
+func (d *preflightDocker) Resolve(ctx context.Context, name string) (string, error) {
+	if d.resolveErr != nil {
+		return "", d.resolveErr
+	}
+	return d.fakeDocker.Resolve(ctx, name)
+}
+
+func (d *preflightDocker) Stats(ctx context.Context, id string) (Stats, error) {
+	if d.statsErr != nil {
+		return Stats{}, d.statsErr
+	}
+	return d.fakeDocker.Stats(ctx, id)
+}
+
+func TestLaterPreflightFailureClosesAllClients(t *testing.T) {
+	for _, stage := range []string{"resolve", "stats"} {
+		t.Run(stage, func(t *testing.T) {
+			failure := errors.New("preflight failure")
+			first, second := &preflightDocker{}, &preflightDocker{}
+			if stage == "resolve" {
+				second.resolveErr = failure
+			} else {
+				second.statsErr = failure
+			}
+			m := Monitor{Targets: []Target{{Component: "first"}, {Component: "second"}}, Interval: time.Second, Timeout: time.Second,
+				Factory: func(_ context.Context, target Target) (Docker, error) {
+					if target.Component == "first" {
+						return first, nil
+					}
+					return second, nil
+				}}
+			dir := t.TempDir()
+			if _, err := m.Start(context.Background(), runner.Scenario{}, filepath.Join(dir, "resources.parquet")); !errors.Is(err, failure) {
+				t.Fatalf("error = %v", err)
+			}
+			if !first.closed || !second.closed {
+				t.Fatal("preflight connection leaked")
+			}
+			entries, err := os.ReadDir(dir)
+			if err != nil || len(entries) != 0 {
+				t.Fatalf("temporary output leaked: %v, %v", entries, err)
+			}
+		})
+	}
+}
+
 func (d *blockedDocker) Stats(ctx context.Context, id string) (Stats, error) {
 	d.mu.Lock()
 	first := d.calls == 0

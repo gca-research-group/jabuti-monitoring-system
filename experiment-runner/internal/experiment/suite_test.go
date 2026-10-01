@@ -318,6 +318,54 @@ type fakeMonitor struct {
 	startErr, stopErr error
 }
 
+type panicExecutor struct{ events *[]string }
+
+func (e panicExecutor) Run(runner.Scenario) {
+	*e.events = append(*e.events, "run")
+	panic("executor panic")
+}
+
+func TestSuiteStopsMonitoringDuringExecutorPanic(t *testing.T) {
+	var events []string
+	s := validSuite(&events)
+	s.Monitor = fakeMonitor{events: &events}
+	s.Executor = panicExecutor{events: &events}
+	func() {
+		defer func() {
+			if got := recover(); got != "executor panic" {
+				t.Fatalf("panic = %v", got)
+			}
+		}()
+		_ = s.Run(oneScenarioParameters())
+	}()
+	want := []string{"initialize", "reset", "consumers", "monitor-start", "run", "monitor-stop"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+	if len(s.Registry.(*fakeRegistry).marks) != 0 {
+		t.Fatal("panicked scenario registered")
+	}
+}
+
+func TestSuiteJoinsMonitoringAndExportFailures(t *testing.T) {
+	var events []string
+	s := validSuite(&events)
+	stopErr, exportErr := errors.New("stop failed"), errors.New("export failed")
+	s.Monitor = fakeMonitor{events: &events, stopErr: stopErr}
+	s.Exporter = &fakeExporter{events: &events, exportErr: exportErr}
+	err := s.Run(oneScenarioParameters())
+	if !errors.Is(err, stopErr) || !errors.Is(err, exportErr) {
+		t.Fatalf("error = %v, want both failures", err)
+	}
+	want := []string{"initialize", "reset", "consumers", "monitor-start", "run", "monitor-stop", "export"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+	if len(s.Registry.(*fakeRegistry).marks) != 0 {
+		t.Fatal("failed scenario registered")
+	}
+}
+
 func (m fakeMonitor) Start(context.Context, runner.Scenario, string) (monitoring.Session, error) {
 	*m.events = append(*m.events, "monitor-start")
 	if m.startErr != nil {
