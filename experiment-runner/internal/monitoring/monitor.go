@@ -67,7 +67,7 @@ func (s *session) Stop(ctx context.Context) (Summary, error) {
 		return Summary{}, ctx.Err()
 	}
 }
-func (m *Monitor) Start(ctx context.Context, scenario runner.Scenario, destination string) (Session, error) {
+func (m *Monitor) Prepare(ctx context.Context, scenario runner.Scenario, destination string) (PreparedSession, error) {
 	if m.Interval <= 0 || m.Timeout <= 0 || m.Factory == nil || len(m.Targets) == 0 {
 		return nil, fmt.Errorf("invalid monitoring configuration")
 	}
@@ -85,15 +85,58 @@ func (m *Monitor) Start(ctx context.Context, scenario runner.Scenario, destinati
 		os.Remove(file.Name())
 		return nil, err
 	}
-	run, cancel := context.WithCancel(ctx)
-	s := &session{clock: clock, cancel: cancel, done: make(chan struct{}), summary: Summary{Components: map[string]Counts{}, Destination: destination}}
-	writer := m.resourceWriter(file, clock)
-	rows := make(chan Sample, 128)
-	m.launchWorkers(run, scenario, workers, initial, clock, rows)
-	go s.writeResources(file, writer, rows)
-	return s, nil
+	return preparedFunc(func(window runner.RunWindow) Session {
+		scenario.Window = window
+		for i := range initial {
+			setWindow(&initial[i], scenario)
+		}
+		run, cancel := context.WithCancel(ctx)
+		s := &session{clock: clock, cancel: cancel, done: make(chan struct{}), summary: Summary{Components: map[string]Counts{}, Destination: destination}}
+		writer := m.resourceWriter(file, clock)
+		for key, value := range window.Metadata() {
+			writer.SetKeyValueMetadata(key, value)
+		}
+		rows := make(chan Sample, 128)
+		m.launchWorkers(run, scenario, workers, initial, clock, rows)
+		go s.writeResources(file, writer, rows)
+		return s
+	}), nil
 }
 
+type PreparedSession interface {
+	Begin(runner.RunWindow) Session
+}
+type preparedFunc func(runner.RunWindow) Session
+
+func (p preparedFunc) Begin(w runner.RunWindow) Session { return p(w) }
+
+// Start retains the standalone monitoring entry point.
+func (m *Monitor) Start(ctx context.Context, scenario runner.Scenario, destination string) (Session, error) {
+	p, err := m.Prepare(ctx, scenario, destination)
+	if err != nil {
+		return nil, err
+	}
+	window := scenario.Window
+	if window.WorkloadStartedAt.IsZero() {
+		duration := scenario.Duration
+		if duration <= 0 {
+			duration = 1
+		}
+		clock := m.Clock
+		if clock == nil {
+			clock = realClock{}
+		}
+		window = runner.NewRunWindow(clock.Now(), scenario.WarmupDuration, duration)
+	}
+	return p.Begin(window), nil
+}
+
+func setWindow(row *Sample, s runner.Scenario) {
+	row.WarmupDuration = int64(s.WarmupDuration)
+	row.WorkloadStartedAt = s.Window.WorkloadStartedAt
+	row.MeasurementStartedAt = s.Window.MeasurementStartedAt
+	row.MeasurementEndedAt = s.Window.MeasurementEndedAt
+}
 func createResourceFile(destination string) (*os.File, error) {
 	if err := os.MkdirAll(filepath.Dir(destination), 0755); err != nil {
 		return nil, err
@@ -151,7 +194,7 @@ func (m *Monitor) preflightTarget(ctx context.Context, scenario runner.Scenario,
 
 func (m *Monitor) resourceWriter(file *os.File, clock Clock) *parquet.GenericWriter[Sample] {
 	writer := parquet.NewGenericWriter[Sample](file, parquet.Compression(&zstd.Codec{}), parquet.MaxRowsPerRowGroup(128))
-	writer.SetKeyValueMetadata("schema_version", "1")
+	writer.SetKeyValueMetadata("schema_version", "2")
 	writer.SetKeyValueMetadata("sample_interval", m.Interval.String())
 	writer.SetKeyValueMetadata("window_start", clock.Now().Format(time.RFC3339Nano))
 	return writer
@@ -334,6 +377,7 @@ func (s *session) verifyResourceRows(path string) error {
 
 func newSample(s runner.Scenario, t Target, id string, now time.Time) Sample {
 	row := Sample{ExecutionID: s.ExecutionID, ScenarioID: s.ScenarioID, Repetition: int32(s.Repetition), Component: t.Component, Host: t.Host, ContainerName: t.Container, Timestamp: now.UTC()}
+	setWindow(&row, s)
 	if id != "" {
 		row.ContainerID = &id
 	}

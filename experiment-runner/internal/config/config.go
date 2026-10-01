@@ -52,6 +52,7 @@ type Env struct {
 }
 
 type Parameters struct {
+	WarmupDuration       int     `json:"warmupDuration"`
 	Events               []int   `json:"events"`
 	IntegrationProcesses []int   `json:"integrationProcesses"`
 	Consumers            []int   `json:"consumers"`
@@ -177,7 +178,13 @@ func LoadParameters() (*Parameters, error) {
 
 	err = json.Unmarshal(data, &parameters)
 
-	return &parameters, err
+	if err != nil {
+		return nil, err
+	}
+	if err := parameters.ValidateTiming(); err != nil {
+		return nil, err
+	}
+	return &parameters, nil
 }
 
 func getEnv(key, fallback string) string {

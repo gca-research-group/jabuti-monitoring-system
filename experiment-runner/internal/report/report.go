@@ -19,7 +19,7 @@ func SaveScenariosToCSV(scenarios []runner.Scenario, filename string) error {
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
-	header := []string{"ExecutionId", "ScenarioId", "Events", "Lambda", "Duration", "IntegrationProcesses", "MaxStartDelay", "Consumers", "Repetition"}
+	header := []string{"ExecutionId", "ScenarioId", "Events", "Lambda", "Duration", "IntegrationProcesses", "MaxStartDelay", "Consumers", "Repetition", "WarmupDuration"}
 	if err := writer.Write(header); err != nil {
 		return fmt.Errorf("failed to write CSV header: %v", err)
 	}
@@ -34,7 +34,7 @@ func SaveScenariosToCSV(scenarios []runner.Scenario, filename string) error {
 			strconv.Itoa(scenario.IntegrationProcesses),
 			strconv.Itoa(scenario.MaxStartDelay),
 			strconv.Itoa(scenario.Consumers),
-			strconv.Itoa(scenario.Repetition),
+			strconv.Itoa(scenario.Repetition), strconv.Itoa(scenario.WarmupDuration),
 		}
 
 		if err := writer.Write(row); err != nil {

@@ -267,3 +267,60 @@ func TestPublicationFailure(t *testing.T) {
 		t.Fatal(files)
 	}
 }
+
+func TestPreparationAndWindowPersistence(t *testing.T) {
+	docker := &fakeDocker{}
+	m := Monitor{Targets: []Target{{Component: "producer", Container: "api"}}, Interval: time.Hour, Timeout: time.Second, Factory: func(context.Context, Target) (Docker, error) { return docker, nil }}
+	path := filepath.Join(t.TempDir(), "resources.parquet")
+	scenario := runner.Scenario{WarmupDuration: 30, Duration: 120}
+	prepared, err := m.Prepare(context.Background(), scenario, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docker.mu.Lock()
+	calls := docker.calls
+	docker.mu.Unlock()
+	if calls != 1 {
+		t.Fatal("preflight missing")
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("published before collection")
+	}
+	window := runner.NewRunWindow(time.Now().Add(time.Second), 30, 120)
+	session := prepared.Begin(window)
+	if _, err := session.Stop(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := parquet.ReadFile[Sample](path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatal(rows)
+	}
+	row := rows[0]
+	if !row.WorkloadStartedAt.Equal(window.WorkloadStartedAt) || !row.MeasurementStartedAt.Equal(window.MeasurementStartedAt) || !row.MeasurementEndedAt.Equal(window.MeasurementEndedAt) || row.WarmupDuration != 30 {
+		t.Fatal(row)
+	}
+	if !row.Timestamp.Before(row.WorkloadStartedAt) {
+		t.Fatal("preflight sample lost")
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	info, _ := f.Stat()
+	pf, err := parquet.OpenFile(f, info.Size())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for key, value := range window.Metadata() {
+		if got, ok := pf.Lookup(key); !ok || got != value {
+			t.Fatalf("%s = %q", key, got)
+		}
+	}
+	if v, _ := pf.Lookup("schema_version"); v != "2" {
+		t.Fatal(v)
+	}
+}

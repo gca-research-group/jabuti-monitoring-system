@@ -19,6 +19,10 @@ type Stats struct {
 	} `json:"memory_stats"`
 }
 type Sample struct {
+	WarmupDuration        int64      `parquet:"warmup_duration"`
+	WorkloadStartedAt     time.Time  `parquet:"workload_started_at,timestamp(microsecond)"`
+	MeasurementStartedAt  time.Time  `parquet:"measurement_started_at,timestamp(microsecond)"`
+	MeasurementEndedAt    time.Time  `parquet:"measurement_ended_at,timestamp(microsecond)"`
 	ExecutionID           string     `parquet:"execution_id"`
 	ScenarioID            string     `parquet:"scenario_id"`
 	Repetition            int32      `parquet:"repetition"`

@@ -20,12 +20,14 @@ type EventClient interface {
 }
 
 type Executor struct {
-	Client EventClient
-	Env    *config.Env
-	Token  string
-	Sleep  func(time.Duration)
-	Random *rand.Rand
-	Logf   func(string, ...any)
+	Client    EventClient
+	Env       *config.Env
+	Token     string
+	Sleep     func(time.Duration)
+	Random    *rand.Rand
+	Logf      func(string, ...any)
+	Now       func() time.Time
+	WaitUntil func(time.Time)
 
 	randomMu sync.Mutex
 }
@@ -50,55 +52,12 @@ func NewExecutor(client EventClient, env *config.Env, token string, random *rand
 	}
 }
 
-func (e *Executor) Run(scenario Scenario) {
-	var wg sync.WaitGroup
-	counters := &requestCounters{failures: make(map[string]uint64)}
-
-	for integrationProcess := 1; integrationProcess <= scenario.IntegrationProcesses; integrationProcess++ {
-		wg.Add(1)
-		go func(process int) {
-			defer wg.Done()
-			e.runIntegrationProcess(scenario, process, counters)
-		}(integrationProcess)
+func (e *Executor) Run(s Scenario) error {
+	if err := e.Prepare(s); err != nil {
+		return err
 	}
-
-	wg.Wait()
-	e.Logf("%s", formatRequestSummary(scenario, counters))
-}
-
-func (e *Executor) runIntegrationProcess(scenario Scenario, integrationProcess int, counters *requestCounters) {
-	startDelay := e.startDelay(scenario.MaxStartDelay)
-	if startDelay > 0 {
-		e.Logf("delaying integration process %d by %v", integrationProcess, startDelay)
-	}
-	e.Sleep(startDelay)
-
-	e.runScenario(scenario, integrationProcess, counters)
-}
-
-func (e *Executor) runScenario(scenario Scenario, integrationProcess int, counters *requestCounters) {
-	var wg sync.WaitGroup
-
-	for second := 0; second < scenario.Duration; second++ {
-		for _, interval := range e.generateEvents(scenario.Events, scenario.Lambda) {
-			wg.Add(1)
-			go func(delay time.Duration) {
-				defer wg.Done()
-				e.Sleep(delay)
-				counters.sent.Add(1)
-				if err := e.Client.ExecuteSmartContract(e.Token, BuildMessage(e.Env, scenario)); err != nil {
-					counters.failed.Add(1)
-					counters.recordFailure(api.ClassifyExecutionFailure(err))
-					return
-				}
-				counters.successful.Add(1)
-			}(interval)
-		}
-
-		e.Sleep(time.Second)
-	}
-
-	wg.Wait()
+	s.Window = NewRunWindow(e.now(), s.WarmupDuration, s.Duration)
+	return e.RunPrepared(s)
 }
 
 func (counters *requestCounters) recordFailure(category string) {

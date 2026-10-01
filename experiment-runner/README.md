@@ -265,3 +265,121 @@ Before production experiments, validate on disposable Linux Docker/SSH hosts,
 compare samples against Docker statistics, exercise unavailable containers, and
 compare repeated enabled/disabled throughput and latency. Real-host acceptance
 requires the configured experiment infrastructure.
+
+## Warm-up and measurement windows
+
+Scenario configuration accepts `warmupDuration` in integer seconds. It defaults
+to zero. `duration` is the measurement duration and must be positive; warm-up
+must be nonnegative, and their sum must fit Go's time duration range.
+
+```json
+{
+  "events": [10],
+  "integrationProcesses": [2],
+  "consumers": [2],
+  "lambda": 0.5,
+  "warmupDuration": 30,
+  "duration": 120,
+  "maxStartDelay": 300,
+  "repetitions": 10
+}
+```
+
+This example generates traffic for 150 seconds. Infrastructure reset, consumer
+setup, the existing 10-second startup pause, randomized process preparation
+delays, and monitoring preflight happen before the shared workload release.
+`maxStartDelay` remains milliseconds, but now delays preparation: all processes
+start the workload together after their delays finish. Warm-up uses the same
+load as measurement, without a traffic pause, reset, or queue clear between them.
+Late scheduling slots are skipped instead of sent as catch-up bursts, so actual
+submitted counts can be below `events * integrationProcesses *
+(warmupDuration + duration)`.
+
+Both event and resource Parquet schemas are version 2 and include:
+
+| Column | Meaning |
+| --- | --- |
+| `warmup_duration` | Configured warm-up seconds |
+| `workload_started_at` | Shared logical start of warm-up traffic |
+| `measurement_started_at` | Workload start plus warm-up duration |
+| `measurement_ended_at` | Measurement start plus measurement duration |
+
+The three timestamps are required UTC timestamps with microsecond precision.
+They are identical across all rows in a repetition and both datasets. Parquet
+file metadata repeats them as UTC RFC3339 timestamps, including for an empty
+event export. `scenarios.csv` includes `WarmupDuration`; it remains a schedule
+and does not contain runtime timestamps. Resource metadata `window_start` and
+`window_end` still describe collection, which can begin before workload and
+continue after measurement.
+
+The measurement interval is half-open: start is included and end is excluded.
+HTTP requests dispatched before the end are allowed to finish afterward;
+monitoring runs until they finish. Export retains all observed warm-up,
+unfinished, and post-cutoff events. There is no RabbitMQ drainage. The logical
+cutoff does not move when requests finish or export runs. Synchronize runner and
+infrastructure clocks: event timestamps come from other hosts and these
+boundaries cannot correct clock skew.
+
+For throughput, count final completions inside the window, including warm-up
+arrivals completed during measurement. The examples below use
+`outbound_queue_processed` as the terminal completion timestamp; only use it if
+it represents completion of the whole pipeline for your experiment.
+
+```sql
+WITH events AS (
+  SELECT * FROM read_parquet(
+    'output/experiments/*/*/[0-9][0-9][0-9][0-9].parquet',
+    union_by_name = true
+  )
+)
+SELECT execution_id, scenario_id, repetition,
+       count(*) FILTER (
+         WHERE outbound_queue_processed >= measurement_started_at
+           AND outbound_queue_processed < measurement_ended_at
+       )::DOUBLE / max(duration) AS completed_events_per_second
+FROM events
+WHERE measurement_started_at IS NOT NULL
+GROUP BY execution_id, scenario_id, repetition;
+```
+
+For latency, select arrivals published during measurement. Include in the latency
+summary only those completed before the cutoff, and report the unfinished
+proportion for the same arrival cohort. This completion-conditioned latency
+excludes unfinished events and can be optimistic under overload.
+
+```sql
+WITH arrivals AS (
+  SELECT * FROM read_parquet(
+    'output/experiments/*/*/[0-9][0-9][0-9][0-9].parquet',
+    union_by_name = true
+  )
+  WHERE inbound_queue_published >= measurement_started_at
+    AND inbound_queue_published < measurement_ended_at
+), cohort AS (
+  SELECT *, outbound_queue_processed >= inbound_queue_published
+            AND outbound_queue_processed < measurement_ended_at AS finished
+  FROM arrivals
+)
+SELECT execution_id, scenario_id, repetition,
+       avg(epoch(outbound_queue_processed - inbound_queue_published) * 1000)
+         FILTER (WHERE finished) AS mean_completed_latency_ms,
+       count(*) FILTER (WHERE finished IS NOT TRUE)::DOUBLE / count(*)
+         AS unfinished_fraction
+FROM cohort
+GROUP BY execution_id, scenario_id, repetition;
+```
+
+For memory, select samples with `timestamp >= measurement_started_at AND
+timestamp < measurement_ended_at`. CPU measurements cover an interval ending
+at `docker_read_timestamp`. For strict in-window CPU averages, also require
+`docker_read_timestamp - cpu_interval_ms * INTERVAL '1 millisecond' >=
+measurement_started_at` and `docker_read_timestamp < measurement_ended_at`.
+Exclude null CPU values and boundary-crossing intervals. These remain sampled
+container statistics, not instantaneous measurements.
+
+Historical files remain untouched. DuckDB `union_by_name = true` exposes missing
+new columns as null; exclude those rows from window-based analysis rather than
+inferring their timing. Warm-up duration and timing protocol version 2 are part
+of completion-registry identity. Legacy entries load as protocol 0 and do not
+skip new runs, even when warm-up is zero. Existing repetitions will therefore
+run again under the new timing protocol.

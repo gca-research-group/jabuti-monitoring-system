@@ -11,13 +11,17 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/runner"
 )
 
 type recordingExecutor struct{ scenarios []runner.Scenario }
 
-func (e *recordingExecutor) Run(s runner.Scenario) { e.scenarios = append(e.scenarios, s) }
+func (e *recordingExecutor) RunPrepared(s runner.Scenario) error {
+	e.scenarios = append(e.scenarios, s)
+	return nil
+}
 
 type recordingExporter struct {
 	fakeExporter
@@ -206,7 +210,7 @@ func TestSuiteRetriesUnregisteredFailures(t *testing.T) {
 					}
 				}
 				err := suite.Run(oneScenarioParameters())
-				if (err != nil) != (attempt == 0 && mode == "monitoring") {
+				if (err != nil) != (attempt == 0) {
 					t.Fatalf("Run() error = %v", err)
 				}
 				if len(executor.scenarios) != 1 {
@@ -217,5 +221,34 @@ func TestSuiteRetriesUnregisteredFailures(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func (e *recordingExecutor) Prepare(runner.Scenario) error { return nil }
+
+func TestSuiteSharesWindowAndRerunsLegacyProtocol(t *testing.T) {
+	var events []string
+	suite := validSuite(&events)
+	parameters := oneScenarioParameters()
+	parameters.WarmupDuration = 30
+	executor := &recordingExecutor{}
+	exporter := &recordingExporter{fakeExporter: fakeExporter{events: &events}}
+	var monitoringWindow runner.RunWindow
+	suite.Executor = executor
+	suite.Exporter = exporter
+	suite.Monitor = fakeMonitor{events: &events, window: &monitoringWindow}
+	suite.Now = func() time.Time { return time.Date(2026, 10, 1, 12, 0, 0, 123456789, time.UTC) }
+	legacy := runner.GenerateScenarios(parameters, rand.New(rand.NewSource(1)))[0].Metadata()
+	legacy.TimingProtocolVersion = 0
+	suite.Registry = &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{legacy: {}}}
+	if err := suite.Run(parameters); err != nil {
+		t.Fatal(err)
+	}
+	if len(executor.scenarios) != 1 || len(exporter.scenarios) != 1 {
+		t.Fatal("legacy entry suppressed new run")
+	}
+	expected := runner.NewRunWindow(suite.Now(), 30, 1)
+	if executor.scenarios[0].Window != expected || exporter.scenarios[0].Window != expected || monitoringWindow != expected {
+		t.Fatal("different windows across subsystems")
 	}
 }

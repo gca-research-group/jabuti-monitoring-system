@@ -31,7 +31,8 @@ type ResultExporter interface {
 }
 
 type ScenarioExecutor interface {
-	Run(scenario runner.Scenario)
+	Prepare(scenario runner.Scenario) error
+	RunPrepared(scenario runner.Scenario) error
 }
 
 type ExperimentResults interface {
@@ -47,7 +48,7 @@ type SuccessRegistry interface {
 }
 
 type ResourceMonitor interface {
-	Start(context.Context, runner.Scenario, string) (monitoring.Session, error)
+	Prepare(context.Context, runner.Scenario, string) (monitoring.PreparedSession, error)
 }
 
 type Suite struct {
@@ -62,10 +63,14 @@ type Suite struct {
 	Sleep          func(duration time.Duration)
 	Random         *rand.Rand
 	Logf           func(string, ...any)
+	Now            func() time.Time
 }
 
 func (s *Suite) Run(parameters config.Parameters) error {
 	if err := s.validate(); err != nil {
+		return err
+	}
+	if err := parameters.ValidateTiming(); err != nil {
 		return err
 	}
 	pending, skipped, err := s.prepare(parameters)
@@ -140,21 +145,33 @@ func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index
 	}
 
 	s.Sleep(10 * time.Second)
-	session, err := s.startMonitoring(ctx, scenario)
+	if err := s.Executor.Prepare(scenario); err != nil {
+		return fmt.Errorf("prepare workload: %w", err)
+	}
+	prepared, err := s.startMonitoring(ctx, scenario)
 	if err != nil {
 		return err
 	}
 
+	now := time.Now()
+	if s.Now != nil {
+		now = s.Now()
+	}
+	scenario.Window = runner.NewRunWindow(now, scenario.WarmupDuration, scenario.Duration)
+	var session monitoring.Session
+	if prepared != nil {
+		session = prepared.Begin(scenario.Window)
+	}
 	monitoringErr := s.executeScenario(scenario, session)
 	return s.exportScenario(ctx, scenario, index, total, monitoringErr)
 }
 
-func (s *Suite) startMonitoring(ctx context.Context, scenario runner.Scenario) (monitoring.Session, error) {
+func (s *Suite) startMonitoring(ctx context.Context, scenario runner.Scenario) (monitoring.PreparedSession, error) {
 	if s.Monitor == nil {
 		return nil, nil
 	}
 
-	session, err := s.Monitor.Start(ctx, scenario, s.Results.ResourceDestination(scenario))
+	session, err := s.Monitor.Prepare(ctx, scenario, s.Results.ResourceDestination(scenario))
 
 	if err != nil {
 		return nil, fmt.Errorf("start resource monitoring: %w", err)
@@ -167,12 +184,12 @@ func (s *Suite) executeScenario(scenario runner.Scenario, session monitoring.Ses
 	if session != nil {
 		defer func() {
 			summary, err := session.Stop(context.Background())
-			monitoringErr = err
+			monitoringErr = errors.Join(monitoringErr, err)
 			s.logMonitoringSummary(summary)
 		}()
 	}
 
-	s.Executor.Run(scenario)
+	monitoringErr = s.Executor.RunPrepared(scenario)
 
 	return monitoringErr
 }
@@ -195,10 +212,10 @@ func (s *Suite) exportScenario(ctx context.Context, scenario runner.Scenario, in
 	}
 
 	if monitoringErr != nil {
-		return fmt.Errorf("finalize resource monitoring: %w", errors.Join(monitoringErr, exportErr))
+		return fmt.Errorf("execute or finalize scenario: %w", errors.Join(monitoringErr, exportErr))
 	}
 
-	if s.Monitor != nil && exportErr != nil {
+	if exportErr != nil {
 		return exportErr
 	}
 

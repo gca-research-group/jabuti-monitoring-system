@@ -47,6 +47,10 @@ WHERE metadata->>'ExecutionId' = $1
 ORDER BY created_at ASC`
 
 type Event struct {
+	WarmupDuration           int64      `parquet:"warmup_duration"`
+	WorkloadStartedAt        time.Time  `parquet:"workload_started_at,timestamp(microsecond)"`
+	MeasurementStartedAt     time.Time  `parquet:"measurement_started_at,timestamp(microsecond)"`
+	MeasurementEndedAt       time.Time  `parquet:"measurement_ended_at,timestamp(microsecond)"`
 	EventID                  string     `parquet:"event_id"`
 	Status                   string     `parquet:"status"`
 	ExecutionID              string     `parquet:"execution_id"`
@@ -103,6 +107,9 @@ func (e *ParquetExporter) Close() error {
 }
 
 func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, destination string) error {
+	if err := scenario.Window.Validate(); err != nil {
+		return err
+	}
 	rows, err := e.DB.QueryContext(ctx, executionQuery, scenario.ExecutionID, scenario.ScenarioID, scenario.Repetition)
 	if err != nil {
 		return fmt.Errorf("query experiment results: %w", err)
@@ -115,12 +122,16 @@ func (e *ParquetExporter) Export(ctx context.Context, scenario runner.Scenario, 
 		if scanErr != nil {
 			return fmt.Errorf("scan experiment result: %w", scanErr)
 		}
+		event.WarmupDuration = int64(scenario.WarmupDuration)
+		event.WorkloadStartedAt = scenario.Window.WorkloadStartedAt
+		event.MeasurementStartedAt = scenario.Window.MeasurementStartedAt
+		event.MeasurementEndedAt = scenario.Window.MeasurementEndedAt
 		events = append(events, event)
 	}
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("read experiment results: %w", err)
 	}
-	if err := writeAtomic(destination, events); err != nil {
+	if err := writeAtomic(destination, events, scenario.Window); err != nil {
 		return err
 	}
 	return nil
@@ -165,7 +176,7 @@ func utcTime(value sql.NullTime) *time.Time {
 	return &utc
 }
 
-func writeAtomic(destination string, events []Event) (err error) {
+func writeAtomic(destination string, events []Event, window runner.RunWindow) (err error) {
 	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
 		return fmt.Errorf("create parquet output directory: %w", err)
 	}
@@ -182,6 +193,10 @@ func writeAtomic(destination string, events []Event) (err error) {
 	}()
 
 	writer := parquet.NewGenericWriter[Event](temp, parquet.Compression(&zstd.Codec{}))
+	writer.SetKeyValueMetadata("schema_version", "2")
+	for key, value := range window.Metadata() {
+		writer.SetKeyValueMetadata(key, value)
+	}
 	if _, err = writer.Write(events); err != nil {
 		return fmt.Errorf("write parquet rows: %w", err)
 	}

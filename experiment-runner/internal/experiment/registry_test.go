@@ -109,3 +109,33 @@ func registryTestMetadata() runner.ScenarioMetadata {
 		Repetition:           3,
 	}
 }
+
+func TestRegistryLoadsLegacyTimingWithoutSkippingNewProtocol(t *testing.T) {
+	root := t.TempDir()
+	legacy := `[{"events":10,"lambda":0.5,"duration":300,"integrationProcesses":2,"maxStartDelay":1,"consumers":4,"repetition":3}]`
+	if err := os.WriteFile(filepath.Join(root, successfulScenariosFilename), []byte(legacy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r := JSONSuccessRegistry{OutputRoot: root}
+	if err := r.Load(); err != nil {
+		t.Fatal(err)
+	}
+	old := r.entries[0]
+	if old.TimingProtocolVersion != 0 || old.WarmupDuration != 0 {
+		t.Fatal(old)
+	}
+	current := old
+	current.TimingProtocolVersion = 2
+	if r.Contains(current) {
+		t.Fatal("legacy skipped current protocol")
+	}
+	if err := r.MarkSuccessful(current); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Load(); err != nil {
+		t.Fatal(err)
+	}
+	if !r.Contains(old) || !r.Contains(current) {
+		t.Fatal("registry lost protocol identities")
+	}
+}

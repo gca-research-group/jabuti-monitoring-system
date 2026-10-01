@@ -8,6 +8,8 @@ import (
 )
 
 type Scenario struct {
+	WarmupDuration       int
+	Window               RunWindow
 	ScenarioID           string
 	ExecutionID          string
 	Events               int
@@ -20,24 +22,28 @@ type Scenario struct {
 }
 
 type ScenarioMetadata struct {
-	Events               int     `json:"events"`
-	Lambda               float64 `json:"lambda"`
-	Duration             int     `json:"duration"`
-	IntegrationProcesses int     `json:"integrationProcesses"`
-	MaxStartDelay        int     `json:"maxStartDelay"`
-	Consumers            int     `json:"consumers"`
-	Repetition           int     `json:"repetition"`
+	WarmupDuration        int     `json:"warmupDuration"`
+	TimingProtocolVersion int     `json:"timingProtocolVersion"`
+	Events                int     `json:"events"`
+	Lambda                float64 `json:"lambda"`
+	Duration              int     `json:"duration"`
+	IntegrationProcesses  int     `json:"integrationProcesses"`
+	MaxStartDelay         int     `json:"maxStartDelay"`
+	Consumers             int     `json:"consumers"`
+	Repetition            int     `json:"repetition"`
 }
 
 func (s Scenario) Metadata() ScenarioMetadata {
 	return ScenarioMetadata{
-		Events:               s.Events,
-		Lambda:               s.Lambda,
-		Duration:             s.Duration,
-		IntegrationProcesses: s.IntegrationProcesses,
-		MaxStartDelay:        s.MaxStartDelay,
-		Consumers:            s.Consumers,
-		Repetition:           s.Repetition,
+		WarmupDuration:        s.WarmupDuration,
+		TimingProtocolVersion: 2,
+		Events:                s.Events,
+		Lambda:                s.Lambda,
+		Duration:              s.Duration,
+		IntegrationProcesses:  s.IntegrationProcesses,
+		MaxStartDelay:         s.MaxStartDelay,
+		Consumers:             s.Consumers,
+		Repetition:            s.Repetition,
 	}
 }
 
@@ -53,6 +59,7 @@ func GenerateScenarios(parameters config.Parameters, random *rand.Rand) []Scenar
 				for repetition := 1; repetition <= parameters.Repetitions; repetition++ {
 					scenarios = append(scenarios, Scenario{
 						ScenarioID:           scenarioID,
+						WarmupDuration:       parameters.WarmupDuration,
 						ExecutionID:          executionID,
 						Events:               event,
 						Lambda:               parameters.Lambda,

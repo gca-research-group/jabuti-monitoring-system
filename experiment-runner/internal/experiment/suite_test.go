@@ -53,8 +53,9 @@ type fakeExecutor struct {
 	events *[]string
 }
 
-func (f fakeExecutor) Run(runner.Scenario) {
+func (f fakeExecutor) RunPrepared(runner.Scenario) error {
 	*f.events = append(*f.events, "run")
+	return nil
 }
 
 type fakeExporter struct {
@@ -126,17 +127,21 @@ func TestSuiteExportsBeforeNextReset(t *testing.T) {
 	}
 }
 
-func TestSuiteLogsExportFailureAndContinuesToFinalReset(t *testing.T) {
+func TestSuiteExportFailureAbortsWithoutRegistration(t *testing.T) {
 	var events []string
-	exportErr := errors.New("write failed")
 	suite := validSuite(&events)
+	exportErr := errors.New("write failed")
 	suite.Exporter = &fakeExporter{events: &events, exportErr: exportErr}
-
-	if err := suite.Run(oneScenarioParameters()); err != nil {
-		t.Fatalf("Run() error = %v", err)
+	if err := suite.Run(oneScenarioParameters()); !errors.Is(err, exportErr) {
+		t.Fatalf("error = %v", err)
+	}
+	if len(suite.Registry.(*fakeRegistry).marks) != 0 {
+		t.Fatal("failed export registered")
+	}
+	if suite.Infrastructure.(*fakeInfrastructure).calls != 1 {
+		t.Fatal("reset after failed export")
 	}
 }
-
 func TestSuiteDoesNotStopRabbitMQAfterExecution(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
@@ -174,7 +179,7 @@ func TestSuiteSkipsCompletedRepetitions(t *testing.T) {
 	registry := &fakeRegistry{completed: make(map[runner.ScenarioMetadata]struct{})}
 	for repetition := 1; repetition <= 3; repetition++ {
 		registry.completed[runner.ScenarioMetadata{
-			Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: repetition,
+			TimingProtocolVersion: 2, Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: repetition,
 		}] = struct{}{}
 	}
 	suite := validSuite(&events)
@@ -198,7 +203,7 @@ func TestSuiteCompletedRegistryAvoidsDatabaseAndInfrastructure(t *testing.T) {
 	var events []string
 	exporter := &fakeExporter{events: &events}
 	registry := &fakeRegistry{completed: map[runner.ScenarioMetadata]struct{}{
-		{Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: 1}: {},
+		{TimingProtocolVersion: 2, Events: 1, Lambda: 0.5, Duration: 1, IntegrationProcesses: 1, Consumers: 1, Repetition: 1}: {},
 	}}
 	suite := validSuite(&events)
 	suite.Exporter = exporter
@@ -234,7 +239,7 @@ func TestSuiteRegistersEverySuccessfulExport(t *testing.T) {
 			suite.Results = &fakeResults{events: &events}
 			suite.Registry = registry
 
-			if err := suite.Run(oneScenarioParameters()); err != nil {
+			if err := suite.Run(oneScenarioParameters()); !errors.Is(err, test.exportErr) {
 				t.Fatalf("Run() error = %v", err)
 			}
 			if len(registry.marks) != test.wantMarks {
@@ -317,11 +322,12 @@ func oneScenarioParameters() config.Parameters {
 type fakeMonitor struct {
 	events            *[]string
 	startErr, stopErr error
+	window            *runner.RunWindow
 }
 
 type panicExecutor struct{ events *[]string }
 
-func (e panicExecutor) Run(runner.Scenario) {
+func (e panicExecutor) RunPrepared(runner.Scenario) error {
 	*e.events = append(*e.events, "run")
 	panic("executor panic")
 }
@@ -367,7 +373,7 @@ func TestSuiteJoinsMonitoringAndExportFailures(t *testing.T) {
 	}
 }
 
-func (m fakeMonitor) Start(context.Context, runner.Scenario, string) (monitoring.Session, error) {
+func (m fakeMonitor) Prepare(context.Context, runner.Scenario, string) (monitoring.PreparedSession, error) {
 	*m.events = append(*m.events, "monitor-start")
 	if m.startErr != nil {
 		return nil, m.startErr
@@ -412,6 +418,56 @@ func TestSuiteMonitoringLifecycle(t *testing.T) {
 			}
 			if (len(registry.marks) == 1) != (mode == "ok") {
 				t.Fatal("incorrect completion")
+			}
+		})
+	}
+}
+
+func (f fakeExecutor) Prepare(runner.Scenario) error  { return nil }
+func (e panicExecutor) Prepare(runner.Scenario) error { return nil }
+func (m fakeMonitor) Begin(w runner.RunWindow) monitoring.Session {
+	if m.window != nil {
+		*m.window = w
+	}
+	return m
+}
+
+type errorExecutor struct {
+	fakeExecutor
+	prepareErr, runErr error
+}
+
+func (e errorExecutor) Prepare(runner.Scenario) error { return e.prepareErr }
+func (e errorExecutor) RunPrepared(s runner.Scenario) error {
+	_ = e.fakeExecutor.RunPrepared(s)
+	return e.runErr
+}
+func TestSuiteTimingFailuresPreventRegistration(t *testing.T) {
+	for _, phase := range []string{"prepare", "run"} {
+		t.Run(phase, func(t *testing.T) {
+			var events []string
+			suite := validSuite(&events)
+			failure := errors.New("timing failure")
+			e := errorExecutor{fakeExecutor: fakeExecutor{events: &events}}
+			if phase == "prepare" {
+				e.prepareErr = failure
+			} else {
+				e.runErr = failure
+			}
+			suite.Executor = e
+			suite.Monitor = fakeMonitor{events: &events}
+			if err := suite.Run(oneScenarioParameters()); !errors.Is(err, failure) {
+				t.Fatal(err)
+			}
+			if len(suite.Registry.(*fakeRegistry).marks) != 0 {
+				t.Fatal("failed timing registered")
+			}
+			joined := strings.Join(events, ",")
+			if phase == "run" && !strings.Contains(joined, "monitor-stop,export") {
+				t.Fatalf("failed run did not stop/export: %v", events)
+			}
+			if phase == "prepare" && strings.Contains(joined, "monitor-start") {
+				t.Fatal("monitor started after failed preparation")
 			}
 		})
 	}
