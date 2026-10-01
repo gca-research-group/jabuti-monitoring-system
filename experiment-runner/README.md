@@ -74,6 +74,11 @@ Edit the `.env` file with your specific settings:
 - `BLOCKCHAIN_ID`: The ID of the blockchain network to use.
 - `SMART_CONTRACT_ID`: The ID of the smart contract to execute.
 - `DATABASE_URL`: PostgreSQL connection string used to export results before each database reset.
+- `FABRIC_SERVER_IP`, `RABBITMQ_SERVER_IP`, `POSTGRES_SERVER_IP`: Addresses of the infrastructure servers reset between scenarios.
+- `<SERVER>_SSH_USER`: Required SSH login for `FABRIC`, `RABBITMQ`, and `POSTGRES`.
+- `<SERVER>_SSH_PORT`: SSH port for those infrastructure servers; defaults to `22`.
+- `API_PRODUCER_SSH_SERVER`, `API_PRODUCER_SSH_USER`, `API_PRODUCER_SSH_PORT`: Producer SSH host, required login, and port (defaults to `22`).
+- `API_CONSUMER_SSH_SERVER`, `API_CONSUMER_SSH_USER`, `API_CONSUMER_SSH_PORT`: Consumer SSH host, required login, and port (defaults to `22`).
 - `EXPERIMENT_OUTPUT_DIR`: Dataset root (defaults to `output/experiments`).
 - `HTTP_MAX_IDLE_CONNS`: Maximum idle connections retained across all API hosts (defaults to `3000`).
 - `HTTP_MAX_IDLE_CONNS_PER_HOST`: Maximum idle connections retained for one API host (defaults to `3000`).
@@ -85,6 +90,8 @@ The HTTP idle connection limits allow established TCP connections to be reused d
 high-load experiments. They do not limit concurrent or in-flight requests. Connection
 counts must be positive integers, and timeout values use Go duration syntax such as
 `500ms`, `15s`, or `2m`.
+
+The SSH client reads `%USERPROFILE%\.ssh\id_ed25519` on Windows (or `~/.ssh/id_ed25519` on Unix). Configure each server to authorize that key for its corresponding SSH user. `FABRIC_PRIVATE_KEY_PATH` is the remote Fabric certificate key path; it does not configure SSH authentication.
 
 ### Running the Experiments
 

@@ -1,0 +1,9 @@
+{
+  "events": [1],
+  "integrationProcesses": [1],
+  "consumers": [1],
+  "lambda": 0.5, 
+  "duration": 30, 
+  "maxStartDelay": 0, 
+  "repetitions": 1 
+}

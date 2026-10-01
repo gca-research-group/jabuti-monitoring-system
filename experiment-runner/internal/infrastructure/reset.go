@@ -2,18 +2,12 @@ package infrastructure
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/api"
 	"github.com/gca-research-group/jabuti-monitoring-system-experiments/internal/config"
-)
-
-const (
-	fabricAddress   = "200.17.87.154:22"
-	rabbitMQAddress = "200.17.87.130:22"
-	postgresAddress = "200.17.87.134:22"
-	apiAddress      = "200.17.87.137:22"
 )
 
 type ResetManager struct {
@@ -25,8 +19,8 @@ type ResetManager struct {
 }
 
 type CommandRunner interface {
-	Run(address string, commands ...string) error
-	RunOutput(address, command string) ([]byte, error)
+	Run(user, address string, commands ...string) error
+	RunOutput(user, address, command string) ([]byte, error)
 }
 
 type RegistrationClient interface {
@@ -57,15 +51,39 @@ func (m *ResetManager) Reset() error {
 	if m.Sleep == nil {
 		return fmt.Errorf("sleep function is required")
 	}
+	for _, required := range []struct{ name, value string }{
+		{"FABRIC_SERVER_IP", m.Env.FabricServerIP},
+		{"RABBITMQ_SERVER_IP", m.Env.RabbitMQServerIP},
+		{"POSTGRES_SERVER_IP", m.Env.PostgresServerIP},
+		{"API_PRODUCER_SSH_SERVER", m.Env.APIProducerSSHServer},
+		{"API_CONSUMER_SSH_SERVER", m.Env.APIConsumerSSHServer},
+		{"FABRIC_SSH_USER", m.Env.FabricSSHUser},
+		{"FABRIC_SSH_PORT", m.Env.FabricSSHPort},
+		{"RABBITMQ_SSH_USER", m.Env.RabbitMQSSHUser},
+		{"RABBITMQ_SSH_PORT", m.Env.RabbitMQSSHPort},
+		{"POSTGRES_SSH_USER", m.Env.PostgresSSHUser},
+		{"POSTGRES_SSH_PORT", m.Env.PostgresSSHPort},
+		{"API_PRODUCER_SSH_USER", m.Env.APIProducerSSHUser},
+		{"API_PRODUCER_SSH_PORT", m.Env.APIProducerSSHPort},
+		{"API_CONSUMER_SSH_USER", m.Env.APIConsumerSSHUser},
+		{"API_CONSUMER_SSH_PORT", m.Env.APIConsumerSSHPort},
+		{"FABRIC_PEER_PORT", m.Env.FabricPeerPort},
+	} {
+		if strings.TrimSpace(required.value) == "" {
+			return fmt.Errorf("%s is required", required.name)
+		}
+	}
 
 	steps := []struct {
 		name     string
+		user     string
 		address  string
 		commands []string
 	}{
 		{
 			name:    "Hyperledger Fabric",
-			address: fabricAddress,
+			user:    m.Env.FabricSSHUser,
+			address: net.JoinHostPort(m.Env.FabricServerIP, m.Env.FabricSSHPort),
 			commands: []string{
 				"cd /home/monitor/app && fno --config network-with-chaincode.yml network down",
 				"rm -rf /home/monitor/app/output/network-with-chaincode",
@@ -75,7 +93,8 @@ func (m *ResetManager) Reset() error {
 		},
 		{
 			name:    "RabbitMQ",
-			address: rabbitMQAddress,
+			user:    m.Env.RabbitMQSSHUser,
+			address: net.JoinHostPort(m.Env.RabbitMQServerIP, m.Env.RabbitMQSSHPort),
 			commands: []string{
 				"cd /home/monitor/app && docker compose -f rabbitmq.yml down",
 				"cd /home/monitor/app && rm -rf volumes/rabbitmq",
@@ -85,7 +104,8 @@ func (m *ResetManager) Reset() error {
 		},
 		{
 			name:    "PostgreSQL",
-			address: postgresAddress,
+			user:    m.Env.PostgresSSHUser,
+			address: net.JoinHostPort(m.Env.PostgresServerIP, m.Env.PostgresSSHPort),
 			commands: []string{
 				"cd /home/monitor/app && docker compose -f network.yml -f postgres.yml down",
 				"cd /home/monitor/app && rm -rf volumes/postgres/data",
@@ -96,21 +116,25 @@ func (m *ResetManager) Reset() error {
 	}
 
 	for _, step := range steps {
-		if err := m.SSH.Run(step.address, step.commands...); err != nil {
+		if err := m.SSH.Run(step.user, step.address, step.commands...); err != nil {
 			return fmt.Errorf("reset %s: %w", step.name, err)
 		}
 	}
 
 	m.Sleep(20 * time.Second)
 
-	if err := m.SSH.Run(apiAddress,
-		"cd /var/www/app/api && docker compose -f api.yml -f node-exporter.yml -f nginx-exporter.yml down",
-		"cd /var/www/app/api && docker compose -f api.yml -f node-exporter.yml -f nginx-exporter.yml up --build -d",
+	if err := m.SSH.Run(m.Env.APIProducerSSHUser, net.JoinHostPort(m.Env.APIProducerSSHServer, m.Env.APIProducerSSHPort),
+		"cd /home/monitor/app && docker compose -f api.yml up api-producer --build -d",
 	); err != nil {
-		return fmt.Errorf("reset API: %w", err)
+		return fmt.Errorf("reset API (producer): %w", err)
+	}
+	if err := m.SSH.Run(m.Env.APIConsumerSSHUser, net.JoinHostPort(m.Env.APIConsumerSSHServer, m.Env.APIConsumerSSHPort),
+		"cd /home/monitor/app && docker compose -f api.yml up api-consumer --build -d",
+	); err != nil {
+		return fmt.Errorf("reset API (consumer): %w", err)
 	}
 
-	m.Sleep(30 * time.Second)
+	m.Sleep(60 * time.Second)
 	return m.registerFabricResources()
 }
 
@@ -133,7 +157,7 @@ func (m *ResetManager) registerFabricResources() error {
 		Platform: "HYPERLEDGER_FABRIC",
 		Parameters: api.BlockchainParameters{
 			MSPID:         "Org1MSP",
-			PeerEndpoint:  "200.17.87.154:7051",
+			PeerEndpoint:  net.JoinHostPort(m.Env.FabricServerIP, m.Env.FabricPeerPort),
 			PeerHostAlias: "peer0.org1.network-with-chaincode.com",
 			ChannelName:   "defaultchannel",
 			SignCert:      signCert,
@@ -161,7 +185,7 @@ func (m *ResetManager) readFabricFile(name, path string) (string, error) {
 		return "", fmt.Errorf("read Fabric %s: path is required", name)
 	}
 
-	output, err := m.SSH.RunOutput(fabricAddress, "cat -- "+shellQuote(path))
+	output, err := m.SSH.RunOutput(m.Env.FabricSSHUser, net.JoinHostPort(m.Env.FabricServerIP, m.Env.FabricSSHPort), "cat -- "+shellQuote(path))
 	if err != nil {
 		return "", fmt.Errorf("read Fabric %s: %w", name, err)
 	}

@@ -9,7 +9,6 @@ import (
 )
 
 type SSHClient struct {
-	User            string
 	PrivateKeyPath  string
 	HostKeyCallback ssh.HostKeyCallback
 }
@@ -17,14 +16,13 @@ type SSHClient struct {
 func NewSSHClient() *SSHClient {
 	home, _ := os.UserHomeDir()
 	return &SSHClient{
-		User:            "root",
 		PrivateKeyPath:  filepath.Join(home, ".ssh", "id_ed25519"),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 }
 
-func (c *SSHClient) Run(address string, commands ...string) error {
-	client, err := c.connect(address)
+func (c *SSHClient) Run(user, address string, commands ...string) error {
+	client, err := c.connect(user, address)
 	if err != nil {
 		return err
 	}
@@ -46,8 +44,8 @@ func (c *SSHClient) Run(address string, commands ...string) error {
 	return nil
 }
 
-func (c *SSHClient) RunOutput(address, command string) ([]byte, error) {
-	client, err := c.connect(address)
+func (c *SSHClient) RunOutput(user, address, command string) ([]byte, error) {
+	client, err := c.connect(user, address)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +65,7 @@ func (c *SSHClient) RunOutput(address, command string) ([]byte, error) {
 	return output, nil
 }
 
-func (c *SSHClient) connect(address string) (*ssh.Client, error) {
+func (c *SSHClient) connect(user, address string) (*ssh.Client, error) {
 	privateKey, err := os.ReadFile(c.PrivateKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("read private key %q: %w", c.PrivateKeyPath, err)
@@ -79,7 +77,7 @@ func (c *SSHClient) connect(address string) (*ssh.Client, error) {
 	}
 
 	client, err := ssh.Dial("tcp", address, &ssh.ClientConfig{
-		User:            c.User,
+		User:            user,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
 		HostKeyCallback: c.HostKeyCallback,
 	})

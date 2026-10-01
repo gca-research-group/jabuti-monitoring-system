@@ -107,20 +107,12 @@ func (s *Suite) Run(parameters config.Parameters) error {
 			return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
 		}
 
-		/* s.Client.ExecuteSmartContract(s.Token, api.SmartContractMessage{
-			BlockchainID: scenario.,
-		}) */
-
 		if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
 			return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
 		}
 
 		s.Sleep(10 * time.Second)
 		s.Executor.Run(scenario)
-
-		// if err := s.Client.StopRabbitMQ(s.Token); err != nil {
-		// 	return fmt.Errorf("stop processing after scenario %d: %w", index+1, err)
-		// }
 
 		destination := s.Results.Destination(scenario)
 		exportErr := s.Exporter.Export(ctx, scenario, destination)
@@ -145,9 +137,9 @@ func (s *Suite) Run(parameters config.Parameters) error {
 		}
 	}
 
-	// if err := s.Infrastructure.Reset(); err != nil {
-	// 	return fmt.Errorf("final infrastructure reset: %w", err)
-	// }
+	if err := s.Infrastructure.Reset(); err != nil {
+		return fmt.Errorf("final infrastructure reset: %w", err)
+	}
 	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
 	return nil
 }

@@ -21,6 +21,22 @@ type Env struct {
 	FabricCACertPath          string
 	FabricPrivateKeyPath      string
 	FabricSignCertPath        string
+	FabricServerIP            string
+	RabbitMQServerIP          string
+	PostgresServerIP          string
+	APIProducerSSHServer      string
+	APIConsumerSSHServer      string
+	FabricSSHUser             string
+	FabricSSHPort             string
+	RabbitMQSSHUser           string
+	RabbitMQSSHPort           string
+	PostgresSSHUser           string
+	PostgresSSHPort           string
+	APIProducerSSHUser        string
+	APIProducerSSHPort        string
+	APIConsumerSSHUser        string
+	APIConsumerSSHPort        string
+	FabricPeerPort            string
 	HTTPMaxIdleConns          int
 	HTTPMaxIdleConnsPerHost   int
 	HTTPIdleConnTimeout       time.Duration
@@ -61,14 +77,41 @@ func LoadEnv() (*Env, error) {
 	if err != nil {
 		return nil, err
 	}
+	for _, name := range []string{"FABRIC_SSH_USER", "RABBITMQ_SSH_USER", "POSTGRES_SSH_USER", "API_PRODUCER_SSH_SERVER", "API_PRODUCER_SSH_USER", "API_CONSUMER_SSH_SERVER", "API_CONSUMER_SSH_USER"} {
+		if strings.TrimSpace(getEnv(name, "")) == "" {
+			return nil, fmt.Errorf("%s is required", name)
+		}
+	}
+	for _, name := range []string{"FABRIC_SSH_PORT", "RABBITMQ_SSH_PORT", "POSTGRES_SSH_PORT", "API_PRODUCER_SSH_PORT", "API_CONSUMER_SSH_PORT"} {
+		port, err := strconv.Atoi(getEnv(name, "22"))
+		if err != nil || port < 1 || port > 65535 {
+			return nil, fmt.Errorf("%s must be a port between 1 and 65535", name)
+		}
+	}
 
 	return &Env{
-		BaseURL:             getEnv("API_BASE_URL", "http://localhost:8080"),
-		ApiKey:              getEnv("API_KEY", ""),
-		DatabaseURL:         getEnv("DATABASE_URL", ""),
-		ExperimentOutputDir: getEnv("EXPERIMENT_OUTPUT_DIR", "output/experiments"),
-		BlockchainID:        getEnv("BLOCKCHAIN_ID", ""),
-		SmartContractID:     getEnv("SMART_CONTRACT_ID", ""),
+		BaseURL:              getEnv("API_BASE_URL", "http://localhost:8080"),
+		ApiKey:               getEnv("API_KEY", ""),
+		DatabaseURL:          getEnv("DATABASE_URL", ""),
+		ExperimentOutputDir:  getEnv("EXPERIMENT_OUTPUT_DIR", "output/experiments"),
+		BlockchainID:         getEnv("BLOCKCHAIN_ID", ""),
+		SmartContractID:      getEnv("SMART_CONTRACT_ID", ""),
+		FabricServerIP:       getEnv("FABRIC_SERVER_IP", ""),
+		RabbitMQServerIP:     getEnv("RABBITMQ_SERVER_IP", ""),
+		PostgresServerIP:     getEnv("POSTGRES_SERVER_IP", ""),
+		APIProducerSSHServer: getEnv("API_PRODUCER_SSH_SERVER", ""),
+		APIConsumerSSHServer: getEnv("API_CONSUMER_SSH_SERVER", ""),
+		FabricSSHUser:        getEnv("FABRIC_SSH_USER", ""),
+		FabricSSHPort:        getEnv("FABRIC_SSH_PORT", "22"),
+		RabbitMQSSHUser:      getEnv("RABBITMQ_SSH_USER", ""),
+		RabbitMQSSHPort:      getEnv("RABBITMQ_SSH_PORT", "22"),
+		PostgresSSHUser:      getEnv("POSTGRES_SSH_USER", ""),
+		PostgresSSHPort:      getEnv("POSTGRES_SSH_PORT", "22"),
+		APIProducerSSHUser:   getEnv("API_PRODUCER_SSH_USER", ""),
+		APIProducerSSHPort:   getEnv("API_PRODUCER_SSH_PORT", "22"),
+		APIConsumerSSHUser:   getEnv("API_CONSUMER_SSH_USER", ""),
+		APIConsumerSSHPort:   getEnv("API_CONSUMER_SSH_PORT", "22"),
+		FabricPeerPort:       getEnv("FABRIC_PEER_PORT", ""),
 		FabricCACertPath: getEnv(
 			"FABRIC_CA_CERT_PATH",
 			"/home/monitor/app/output/network-with-chaincode/org1.network-with-chaincode.com/data/certificate-authority/organizations/peerOrganizations/org1.network-with-chaincode.com/peers/peer0.org1.network-with-chaincode.com/tls/ca.crt",

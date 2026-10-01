@@ -1,10 +1,18 @@
 package config
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestMain(m *testing.M) {
+	for _, name := range []string{"FABRIC_SSH_USER", "RABBITMQ_SSH_USER", "POSTGRES_SSH_USER", "API_PRODUCER_SSH_SERVER", "API_PRODUCER_SSH_USER", "API_CONSUMER_SSH_SERVER", "API_CONSUMER_SSH_USER"} {
+		os.Setenv(name, "test-user")
+	}
+	os.Exit(m.Run())
+}
 
 func TestLoadEnvLoadsFabricCredentialPaths(t *testing.T) {
 	t.Setenv("FABRIC_CA_CERT_PATH", "/configured/ca.crt")
@@ -24,6 +32,73 @@ func TestLoadEnvLoadsFabricCredentialPaths(t *testing.T) {
 	}
 	if env.FabricSignCertPath != "/configured/cert.pem" {
 		t.Fatalf("FabricSignCertPath = %q", env.FabricSignCertPath)
+	}
+}
+
+func TestLoadEnvLoadsResetNetworkConfiguration(t *testing.T) {
+	t.Setenv("FABRIC_SERVER_IP", "192.0.2.1")
+	t.Setenv("RABBITMQ_SERVER_IP", "192.0.2.2")
+	t.Setenv("POSTGRES_SERVER_IP", "192.0.2.3")
+	t.Setenv("API_PRODUCER_SSH_SERVER", "192.0.2.4")
+	t.Setenv("API_CONSUMER_SSH_SERVER", "192.0.2.5")
+	t.Setenv("FABRIC_PEER_PORT", "8051")
+
+	env, err := LoadEnv()
+	if err != nil {
+		t.Fatalf("LoadEnv() error = %v", err)
+	}
+	if env.FabricServerIP != "192.0.2.1" || env.RabbitMQServerIP != "192.0.2.2" ||
+		env.PostgresServerIP != "192.0.2.3" || env.APIProducerSSHServer != "192.0.2.4" || env.APIConsumerSSHServer != "192.0.2.5" ||
+		env.FabricPeerPort != "8051" || env.FabricSSHPort != "22" || env.RabbitMQSSHPort != "22" ||
+		env.PostgresSSHPort != "22" || env.APIProducerSSHPort != "22" || env.APIConsumerSSHPort != "22" {
+		t.Fatalf("reset network configuration = %+v", env)
+	}
+
+	t.Setenv("FABRIC_SSH_USER", "fabric-user")
+	t.Setenv("FABRIC_SSH_PORT", "2222")
+	t.Setenv("RABBITMQ_SSH_USER", "rabbit-user")
+	t.Setenv("RABBITMQ_SSH_PORT", "2223")
+	t.Setenv("POSTGRES_SSH_USER", "postgres-user")
+	t.Setenv("POSTGRES_SSH_PORT", "2224")
+	t.Setenv("API_PRODUCER_SSH_USER", "producer-user")
+	t.Setenv("API_PRODUCER_SSH_PORT", "2225")
+	t.Setenv("API_CONSUMER_SSH_USER", "consumer-user")
+	t.Setenv("API_CONSUMER_SSH_PORT", "2226")
+	env, err = LoadEnv()
+	if err != nil {
+		t.Fatalf("LoadEnv() with SSH overrides error = %v", err)
+	}
+	if env.FabricSSHUser != "fabric-user" || env.FabricSSHPort != "2222" ||
+		env.RabbitMQSSHUser != "rabbit-user" || env.RabbitMQSSHPort != "2223" ||
+		env.PostgresSSHUser != "postgres-user" || env.PostgresSSHPort != "2224" ||
+		env.APIProducerSSHUser != "producer-user" || env.APIProducerSSHPort != "2225" ||
+		env.APIConsumerSSHUser != "consumer-user" || env.APIConsumerSSHPort != "2226" {
+		t.Fatalf("SSH settings = %+v", env)
+	}
+}
+
+func TestLoadEnvRejectsMissingSSHUserAndInvalidPort(t *testing.T) {
+	for _, tc := range []struct{ key, value string }{
+		{"FABRIC_SSH_USER", ""},
+		{"RABBITMQ_SSH_USER", " "},
+		{"POSTGRES_SSH_USER", ""},
+		{"API_PRODUCER_SSH_SERVER", ""},
+		{"API_PRODUCER_SSH_USER", ""},
+		{"API_CONSUMER_SSH_SERVER", " "},
+		{"API_CONSUMER_SSH_USER", ""},
+		{"FABRIC_SSH_PORT", "0"},
+		{"RABBITMQ_SSH_PORT", "65536"},
+		{"POSTGRES_SSH_PORT", "abc"},
+		{"API_PRODUCER_SSH_PORT", "-1"},
+		{"API_CONSUMER_SSH_PORT", "65536"},
+	} {
+		t.Run(tc.key+tc.value, func(t *testing.T) {
+			t.Setenv(tc.key, tc.value)
+			_, err := LoadEnv()
+			if err == nil || !strings.Contains(err.Error(), tc.key) {
+				t.Fatalf("LoadEnv() error = %v, want %s", err, tc.key)
+			}
+		})
 	}
 }
 

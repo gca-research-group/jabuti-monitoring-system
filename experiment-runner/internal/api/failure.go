@@ -44,6 +44,7 @@ func (err *httpStatusError) Error() string {
 }
 
 func wrapExecutionError(stage executionFailureStage, err error) error {
+	fmt.Printf("[wrapExecutionError] %v\n", err)
 	return &executionError{stage: stage, err: err}
 }
 
