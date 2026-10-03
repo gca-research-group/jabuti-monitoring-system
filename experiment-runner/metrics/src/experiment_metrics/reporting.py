@@ -17,12 +17,13 @@ def write_reports(result, folder: Path):
     for name in (
         "runs_summary",
         "resources_summary",
+        "queues_summary",
         "throughput_timeseries",
         "errors_by_category",
     ):
         frame = getattr(result, name)
         frame.write_parquet(folder / f"{name}.parquet", compression="zstd")
-        if name in {"runs_summary", "resources_summary"}:
+        if name in {"runs_summary", "resources_summary", "queues_summary"}:
             frame.write_csv(folder / f"{name}.csv")
     result.scenario_summary.write_csv(folder / "scenario_summary.csv")
     for name, value in (

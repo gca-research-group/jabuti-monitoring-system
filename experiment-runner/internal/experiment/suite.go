@@ -39,6 +39,12 @@ type ExperimentResults interface {
 	Initialize(scenarios []runner.Scenario) error
 	Destination(scenario runner.Scenario) string
 	ResourceDestination(scenario runner.Scenario) string
+	QueueDestination(scenario runner.Scenario) string
+}
+
+type QueueFinalizer interface {
+	StopConsumers() error
+	CollectAndSave(context.Context, runner.Scenario, string) error
 }
 
 type SuccessRegistry interface {
@@ -52,6 +58,7 @@ type ResourceMonitor interface {
 }
 
 type Suite struct {
+	Queues         QueueFinalizer
 	Monitor        ResourceMonitor
 	Client         APIClient
 	Infrastructure Infrastructure
@@ -163,6 +170,19 @@ func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index
 		session = prepared.Begin(scenario.Window)
 	}
 	monitoringErr := s.executeScenario(scenario, session)
+	stopErr := s.Client.StopRabbitMQ(s.Token)
+	if stopErr != nil {
+		stopErr = fmt.Errorf("stop RabbitMQ listeners: %w", stopErr)
+	}
+	workerErr := s.Queues.StopConsumers()
+	finalizationErr := errors.Join(stopErr, workerErr)
+	if finalizationErr == nil {
+		finalizationErr = s.Queues.CollectAndSave(ctx, scenario, s.Results.QueueDestination(scenario))
+		if finalizationErr != nil {
+			finalizationErr = fmt.Errorf("collect and save queue snapshot: %w", finalizationErr)
+		}
+	}
+	monitoringErr = errors.Join(monitoringErr, finalizationErr)
 	return s.exportScenario(ctx, scenario, index, total, monitoringErr)
 }
 
@@ -239,6 +259,8 @@ func (s *Suite) exportScenario(ctx context.Context, scenario runner.Scenario, in
 
 func (s *Suite) validate() error {
 	switch {
+	case s.Queues == nil:
+		return fmt.Errorf("queue finalizer is required")
 	case s.Client == nil:
 		return fmt.Errorf("API client is required")
 	case s.Infrastructure == nil:

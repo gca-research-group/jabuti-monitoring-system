@@ -195,6 +195,8 @@ func TestLoadEnvRejectsInvalidHTTPConfiguration(t *testing.T) {
 
 func TestResourceConfiguration(t *testing.T) {
 	t.Setenv("RESOURCE_MONITORING_ENABLED", "false")
+	t.Setenv("RESOURCE_PRODUCER_CONTAINER", "api-producer")
+	t.Setenv("RESOURCE_CONSUMER_CONTAINER", "api-consumer")
 	e, err := LoadEnv()
 	if err != nil || e.ResourceMonitoringEnabled || e.ResourceSampleInterval != time.Second || e.ResourceSampleTimeout != 5*time.Second {
 		t.Fatalf("defaults: %+v %v", e, err)
@@ -209,7 +211,26 @@ func TestResourceConfiguration(t *testing.T) {
 	}
 	t.Setenv("RESOURCE_MONITORING_ENABLED", "true")
 	t.Setenv("RABBITMQ_SERVER_IP", "host")
-	t.Setenv("RESOURCE_PRODUCER_CONTAINER", "")
+	if _, err := LoadEnv(); err != nil {
+		t.Fatalf("enabled monitoring: %v", err)
+	}
+	t.Run("custom producer and consumer", func(t *testing.T) {
+		t.Setenv("RESOURCE_PRODUCER_CONTAINER", "custom-producer")
+		t.Setenv("RESOURCE_CONSUMER_CONTAINER", "custom-consumer")
+		e, err := LoadEnv()
+		if err != nil || e.ResourceProducerContainer != "custom-producer" || e.ResourceConsumerContainer != "custom-consumer" {
+			t.Fatalf("custom monitoring targets: %+v %v", e, err)
+		}
+	})
+	for _, name := range []string{"RESOURCE_PRODUCER_CONTAINER", "RESOURCE_CONSUMER_CONTAINER"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(name, " ")
+			if _, err := LoadEnv(); err == nil || !strings.Contains(err.Error(), name) {
+				t.Fatalf("empty enabled target: %v", err)
+			}
+		})
+	}
+	t.Setenv("RESOURCE_RABBITMQ_CONTAINER", "")
 	if _, err := LoadEnv(); err == nil {
 		t.Fatal("empty enabled target accepted")
 	}

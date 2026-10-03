@@ -54,6 +54,7 @@ func run() error {
 	resultExporter := &exporter.ParquetExporter{DatabaseURL: env.DatabaseURL}
 	defer resultExporter.Close()
 	suite := experiment.Suite{
+		Queues:         &infrastructure.QueueFinalizer{SSH: infrastructure.NewSSHClient(), Env: env},
 		Client:         client,
 		Infrastructure: infrastructure.NewResetManager(client, env, client),
 		Executor:       executor,

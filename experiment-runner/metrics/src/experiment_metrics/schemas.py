@@ -3,6 +3,15 @@
 import polars as pl
 
 KEY_SCHEMA = {"execution_id": pl.String, "scenario_id": pl.String, "repetition": pl.Int64}
+QUEUE_SCHEMA = {
+    **KEY_SCHEMA,
+    "captured_at": pl.Datetime("us", "UTC"),
+    "virtual_host": pl.String,
+    "queue_name": pl.String,
+    "messages_ready": pl.Int64,
+    "messages_unacknowledged": pl.Int64,
+    "messages": pl.Int64,
+}
 RUN_COUNTS = (
     "pipeline_successful_completions",
     "pipeline_terminal_completions",

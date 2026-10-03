@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-PATTERN = re.compile(r"([0-9]+)(?:\.(resources|requests|transactions))?\.parquet$")
+PATTERN = re.compile(r"([0-9]+)(?:\.(resources|requests|transactions|queues))?\.parquet$")
 CSV_NAMES = {
     "ExecutionId": "execution_id",
     "ScenarioId": "scenario_id",

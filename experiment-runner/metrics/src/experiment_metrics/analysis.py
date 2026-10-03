@@ -11,9 +11,10 @@ from .discovery import discover, identity
 from .errors import client_errors, fabric_outcomes, pipeline_errors
 from .latency import event_quality, pipeline_latency
 from .logs import request_log_summaries
+from .queues import QUEUE_METRICS, load_queues
 from .reporting import table, write_reports
 from .resources import resource_metrics
-from .schemas import ERROR_SCHEMA, RESOURCE_SCHEMA, RUN_COUNTS, TIMESERIES_SCHEMA
+from .schemas import ERROR_SCHEMA, QUEUE_SCHEMA, RESOURCE_SCHEMA, RUN_COUNTS, TIMESERIES_SCHEMA
 from .throughput import pipeline_throughput
 from .validation import load_dataset
 
@@ -28,6 +29,7 @@ LATENCY_CAVEAT = (
 class AnalysisResult:
     runs_summary: pl.DataFrame
     resources_summary: pl.DataFrame
+    queues_summary: pl.DataFrame
     throughput_timeseries: pl.DataFrame
     errors_by_category: pl.DataFrame
     scenario_summary: pl.DataFrame
@@ -65,6 +67,7 @@ def analyze_experiments(
         except ValueError as exc:
             log_quality.append({"path": str(log_path), "reason": str(exc)})
     run_rows, resource_rows, bins, errors, quality, versions = [], [], [], [], [], {}
+    queue_rows = []
     for key in sorted(set(files_by_run) | set(schedules)):
         files = files_by_run.get(key, {})
         run_quality = {
@@ -74,8 +77,13 @@ def analyze_experiments(
             "warnings": [LATENCY_CAVEAT],
         }
         loaded = {}
+        queue_data = None
         for kind, path in sorted(files.items()):
             try:
+                if kind == "queues":
+                    queue_data = load_queues(path, key)
+                    versions[str(path)] = queue_data[2]
+                    continue
                 loaded[kind] = load_dataset(path, kind, key, schedules.get(key, {}))
                 versions[str(path)] = loaded[kind][3]
             except (
@@ -85,7 +93,14 @@ def analyze_experiments(
                 OverflowError,
                 pl.exceptions.PolarsError,
             ) as exc:
-                run_quality["invalid_inputs"].append({"path": str(path), "reason": str(exc)})
+                if kind == "queues":
+                    run_quality["queues"] = {
+                        "status": "invalid",
+                        "path": str(path),
+                        "reason": str(exc),
+                    }
+                else:
+                    run_quality["invalid_inputs"].append({"path": str(path), "reason": str(exc)})
         dimensions = {name: None for name in DIMENSION_COLUMNS}
         # Non-duration workload settings are still known for scheduled missing/invalid files.
         for name, value in schedules.get(key, {}).items():
@@ -121,9 +136,21 @@ def analyze_experiments(
             "client_metrics_available": False,
             "fabric_metrics_available": False,
             "resource_metrics_available": False,
+            "queue_metrics_available": False,
+            "queue_count": None,
+            **{name: None for name in QUEUE_METRICS},
         }
         if not loaded:
             row["analysis_status"] = "invalid" if files else "missing"
+        if queue_data is not None:
+            queue_frame, queue_metrics, _ = queue_data
+            queue_rows.extend(queue_frame.to_dicts())
+            row.update(queue_metrics)
+            run_quality["queues"] = {"status": "available", "scope": "post_shutdown"}
+            if not loaded and not run_quality["invalid_inputs"]:
+                row["analysis_status"] = "analyzed"
+        elif "queues" not in run_quality:
+            run_quality["queues"] = {"status": "missing"}
         if windows:
             window = windows[0]
             row.update(
@@ -221,6 +248,7 @@ def analyze_experiments(
                 "Confirmed transaction commit outcomes unavailable; pipeline is not Fabric TPS",
             ),
             ("resource_metrics_available", "Container resource observations unavailable"),
+            ("queue_metrics_available", "Post-shutdown queue snapshot missing or invalid"),
         ):
             if not row[flag]:
                 run_quality["unavailable_metrics"].append({"metric": flag, "reason": reason})
@@ -240,7 +268,12 @@ def analyze_experiments(
         ],
         *[
             pl.col(name).cast(pl.Int64)
-            for name in (*RUN_COUNTS, *[col for col in DIMENSION_COLUMNS if col != "lambda"])
+            for name in (
+                *RUN_COUNTS,
+                *QUEUE_METRICS,
+                "queue_count",
+                *[col for col in DIMENSION_COLUMNS if col != "lambda"],
+            )
         ],
         pl.col("latency_small_sample").cast(pl.Boolean),
         pl.col("experiment_label").cast(pl.String),
@@ -250,6 +283,7 @@ def analyze_experiments(
     result = AnalysisResult(
         runs_summary=runs,
         resources_summary=table(resource_rows, RESOURCE_SCHEMA),
+        queues_summary=table(queue_rows, QUEUE_SCHEMA),
         throughput_timeseries=table(bins, TIMESERIES_SCHEMA),
         errors_by_category=table(errors, ERROR_SCHEMA),
         scenario_summary=aggregate_runs(runs),
@@ -282,12 +316,14 @@ def analyze_experiments(
                 "cpu": "interval start >= start; interval end < end; duration weighted",
                 "memory_coverage": "estimated union of nominal sampling intervals",
                 "naive_timestamps": "v2/v3 Go UTC time.Time export contract",
+                "queues": "post-shutdown snapshot; may include warm-up and post-cutoff messages",
             },
             "units": {
                 "latency": "ms",
                 "memory": "MiB (2^20 bytes)",
                 "cpu": "percent; 100% is one logical CPU",
                 "scenario_duration": "ms",
+                "queues": "messages; not unique events",
             },
             "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
         },

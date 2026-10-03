@@ -19,6 +19,10 @@ func TestDatasetCreatesFlattenedLayoutWithoutManifest(t *testing.T) {
 	}
 
 	want := filepath.Join(dataset.OutputRoot, "execution", "scenario", "0002.parquet")
+	queueWant := filepath.Join(dataset.OutputRoot, "execution", "scenario", "0002.queues.parquet")
+	if got := dataset.QueueDestination(scenario); got != queueWant {
+		t.Fatalf("QueueDestination() = %q, want %q", got, queueWant)
+	}
 	if got := dataset.Destination(scenario); filepath.Clean(got) != want {
 		t.Fatalf("Destination() = %q, want %q", got, want)
 	}

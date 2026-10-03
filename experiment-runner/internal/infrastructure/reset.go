@@ -124,12 +124,12 @@ func (m *ResetManager) Reset() error {
 	m.Sleep(20 * time.Second)
 
 	if err := m.SSH.Run(m.Env.APIProducerSSHUser, net.JoinHostPort(m.Env.APIProducerSSHServer, m.Env.APIProducerSSHPort),
-		"cd /home/monitor/app && docker compose -f api.yml up api-producer --build -d",
+		"cd /home/monitor/app && docker compose -f producer.yml up --build --force-recreate -d",
 	); err != nil {
 		return fmt.Errorf("reset API (producer): %w", err)
 	}
 	if err := m.SSH.Run(m.Env.APIConsumerSSHUser, net.JoinHostPort(m.Env.APIConsumerSSHServer, m.Env.APIConsumerSSHPort),
-		"cd /home/monitor/app && docker compose -f api.yml up api-consumer --build -d",
+		"cd /home/monitor/app && docker compose -f consumer.yml up --build --force-recreate -d",
 	); err != nil {
 		return fmt.Errorf("reset API (consumer): %w", err)
 	}

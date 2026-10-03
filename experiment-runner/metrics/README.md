@@ -173,6 +173,9 @@ Only counters/category names are copied into reports, not raw diagnostic message
 * `runs_summary.parquet`, `runs_summary.csv`: one row per run key, metric units in
   names, counts/denominators, availability flags, analysis status.
 * `resources_summary.parquet`, `resources_summary.csv`: per container resource metrics.
+* `queues_summary.parquet`, `queues_summary.csv`: post-shutdown counts per virtual host
+  and queue, with run identity and UTC capture timestamps, including dead-letter and
+  zero-count queues.
 * `throughput_timeseries.parquet`: measurement-aligned completion bins.
 * `errors_by_category.parquet`: separate layers, scopes, counts, and denominators.
 * `scenario_summary.csv`: repetition counts, available observation counts, arithmetic
@@ -216,3 +219,32 @@ all 250 repetitions lack schema-version/window metadata and are correctly flagge
 as incompatible. No real windowed metric was claimed for that historical dataset.
 The committed fixtures produced by the current Go exporter were also analyzed;
 independent known-answer checks verify throughput, latency, CPU, and memory.
+
+## Post-shutdown queue counts
+
+Queue snapshots named `<repetition>.queues.parquet` are analyzed independently of
+measurement-window datasets. `AnalysisResult.queues_summary` preserves each queue's
+`virtual_host`, `queue_name`, `captured_at`, `messages_ready`,
+`messages_unacknowledged`, and `messages`, plus execution/scenario/repetition identity.
+
+`runs_summary` includes `queue_metrics_available`, `queue_count`,
+`queue_messages_ready`, `queue_messages_unacknowledged`, and `queue_messages_total`.
+Counts are summed across all queues and virtual hosts, including dead-letter queues.
+`scenario_summary` reports `repetition_mean`, `repetition_stddev` (`ddof=1`), and
+`available_repetitions` for each of the three message totals, using existing
+configuration grouping. A single available repetition has a null sample standard
+deviation.
+
+These are post-shutdown **message** counts, not unique-event counts or backlog at
+the measurement cutoff. They may include warm-up and post-cutoff messages. They do
+not change throughput, latency, or error calculations and are not used to infer
+failure rates.
+
+Schema version 1 requires run identity, UTC capture timestamps, unique
+virtual-host/queue pairs, and nonnegative integer counts with
+`messages = messages_ready + messages_unacknowledged`. The Go writer's timestamp
+without a timezone annotation is interpreted as UTC. Missing snapshots in older
+datasets yield null metrics; valid empty snapshots yield zero queues and zero
+messages. Invalid snapshots make only queue metrics unavailable, leaving valid
+event and resource metrics usable. `data_quality.json` records queue status and
+validation errors, and the manifest includes valid queue schema metadata.

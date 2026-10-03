@@ -31,3 +31,5 @@ config/*.env
 # Docker Files (if using Docker)
 docker-compose.override.yml
 volumes
+.uv-cache/
+.uv-python/

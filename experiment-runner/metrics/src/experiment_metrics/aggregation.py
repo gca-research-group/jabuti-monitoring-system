@@ -1,6 +1,7 @@
 import polars as pl
 
 from .config import DIMENSIONS
+from .queues import QUEUE_METRICS
 
 DIMENSION_COLUMNS = [
     name + "_ms" if name in {"duration", "warmup_duration", "max_start_delay"} else name
@@ -27,7 +28,7 @@ def aggregate_runs(runs: pl.DataFrame):
         "repetition_count": pl.Int64,
         **{
             f"{metric}_{suffix}": pl.Int64 if suffix == "available_repetitions" else pl.Float64
-            for metric in METRICS
+            for metric in (*METRICS, *QUEUE_METRICS)
             for suffix in ("repetition_mean", "repetition_stddev", "available_repetitions")
         },
     }
@@ -50,7 +51,7 @@ def aggregate_runs(runs: pl.DataFrame):
         pl.len().alias("repetition_count"),
         *[
             expr
-            for metric in METRICS
+            for metric in (*METRICS, *QUEUE_METRICS)
             for expr in (
                 pl.col(metric).mean().alias(f"{metric}_repetition_mean"),
                 pl.col(metric).std(ddof=1).alias(f"{metric}_repetition_stddev"),

@@ -121,7 +121,7 @@ func TestSuiteExportsBeforeNextReset(t *testing.T) {
 		t.Fatalf("Run() error = %v", err)
 	}
 
-	want := []string{"initialize", "reset", "consumers", "run", "export", "reset"}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "worker-stop", "queues", "export", "reset"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -142,18 +142,20 @@ func TestSuiteExportFailureAbortsWithoutRegistration(t *testing.T) {
 		t.Fatal("reset after failed export")
 	}
 }
-func TestSuiteDoesNotStopRabbitMQAfterExecution(t *testing.T) {
+func TestSuiteStopFailurePreservesInfrastructure(t *testing.T) {
 	var events []string
 	suite := validSuite(&events)
-	suite.Client = fakeAPI{events: &events, stopError: errors.New("stop failed")}
-
-	err := suite.Run(oneScenarioParameters())
-	if err != nil {
-		t.Fatalf("Run() error = %v", err)
+	failure := errors.New("stop failed")
+	suite.Client = fakeAPI{events: &events, stopError: failure}
+	if err := suite.Run(oneScenarioParameters()); !errors.Is(err, failure) {
+		t.Fatal(err)
 	}
-	want := []string{"initialize", "reset", "consumers", "run", "export", "reset"}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "worker-stop", "export"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
+	}
+	if len(suite.Registry.(*fakeRegistry).marks) != 0 {
+		t.Fatal("failed stop registered")
 	}
 }
 
@@ -258,7 +260,7 @@ func TestSuiteRegistryWriteFailureAbortsBeforeFinalReset(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "record successful scenario") {
 		t.Fatalf("Run() error = %v", err)
 	}
-	want := []string{"initialize", "reset", "consumers", "run", "export"}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "worker-stop", "queues", "export"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -296,6 +298,7 @@ func TestSuiteSuccessfulExportRegistersScenario(t *testing.T) {
 
 func validSuite(events *[]string) Suite {
 	return Suite{
+		Queues:         fakeQueues{events: events},
 		Client:         fakeAPI{events: events},
 		Infrastructure: &fakeInfrastructure{events: events},
 		Executor:       fakeExecutor{events: events},
@@ -364,7 +367,7 @@ func TestSuiteJoinsMonitoringAndExportFailures(t *testing.T) {
 	if !errors.Is(err, stopErr) || !errors.Is(err, exportErr) {
 		t.Fatalf("error = %v, want both failures", err)
 	}
-	want := []string{"initialize", "reset", "consumers", "monitor-start", "run", "monitor-stop", "export"}
+	want := []string{"initialize", "reset", "consumers", "monitor-start", "run", "monitor-stop", "stop", "worker-stop", "queues", "export"}
 	if !reflect.DeepEqual(events, want) {
 		t.Fatalf("events = %v, want %v", events, want)
 	}
@@ -408,7 +411,7 @@ func TestSuiteMonitoringLifecycle(t *testing.T) {
 			}
 			want := []string{"initialize", "reset", "consumers", "monitor-start"}
 			if mode != "start failure" {
-				want = append(want, "run", "monitor-stop", "export")
+				want = append(want, "run", "monitor-stop", "stop", "worker-stop", "queues", "export")
 			}
 			if mode == "ok" {
 				want = append(want, "reset")
@@ -463,12 +466,71 @@ func TestSuiteTimingFailuresPreventRegistration(t *testing.T) {
 				t.Fatal("failed timing registered")
 			}
 			joined := strings.Join(events, ",")
-			if phase == "run" && !strings.Contains(joined, "monitor-stop,export") {
+			if phase == "run" && !strings.Contains(joined, "monitor-stop,stop,worker-stop,queues,export") {
 				t.Fatalf("failed run did not stop/export: %v", events)
 			}
 			if phase == "prepare" && strings.Contains(joined, "monitor-start") {
 				t.Fatal("monitor started after failed preparation")
 			}
 		})
+	}
+}
+
+func (f *fakeResults) QueueDestination(runner.Scenario) string { return "queues.parquet" }
+
+type fakeQueues struct {
+	events              *[]string
+	stopErr, collectErr error
+}
+
+func (f fakeQueues) StopConsumers() error {
+	*f.events = append(*f.events, "worker-stop")
+	return f.stopErr
+}
+func (f fakeQueues) CollectAndSave(context.Context, runner.Scenario, string) error {
+	*f.events = append(*f.events, "queues")
+	return f.collectErr
+}
+func TestSuiteQueueFailuresStillExportAndPreventReset(t *testing.T) {
+	for _, phase := range []string{"worker", "collect"} {
+		t.Run(phase, func(t *testing.T) {
+			var events []string
+			suite := validSuite(&events)
+			failure, exportErr := errors.New("queue failure"), errors.New("export failure")
+			q := fakeQueues{events: &events}
+			if phase == "worker" {
+				q.stopErr = failure
+			} else {
+				q.collectErr = failure
+			}
+			suite.Queues = q
+			suite.Exporter = &fakeExporter{events: &events, exportErr: exportErr}
+			err := suite.Run(oneScenarioParameters())
+			if !errors.Is(err, failure) || !errors.Is(err, exportErr) {
+				t.Fatal(err)
+			}
+			if suite.Infrastructure.(*fakeInfrastructure).calls != 1 || len(suite.Registry.(*fakeRegistry).marks) != 0 {
+				t.Fatal("failure reset or registered")
+			}
+			if events[len(events)-1] != "export" {
+				t.Fatal(events)
+			}
+			if phase == "worker" && strings.Contains(strings.Join(events, ","), "queues") {
+				t.Fatal("collected after shutdown failure")
+			}
+		})
+	}
+}
+func TestSuiteFinalizesEveryRepetition(t *testing.T) {
+	var events []string
+	suite := validSuite(&events)
+	parameters := oneScenarioParameters()
+	parameters.Repetitions = 2
+	if err := suite.Run(parameters); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"initialize", "reset", "consumers", "run", "stop", "worker-stop", "queues", "export", "reset", "consumers", "run", "stop", "worker-stop", "queues", "export", "reset"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("%v", events)
 	}
 }

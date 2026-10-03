@@ -34,6 +34,12 @@ This project centralizes the experiments that evaluate the [Fabric Network Orche
 
 ## Project Structure
 
+Offline experiment metrics are available in [`python-metrics`](python-metrics/README.md).
+Set the top-level `PARQUET_FOLDER` in `python-metrics/run_metrics.py`, then run
+`uv sync --locked` and `uv run --locked run_metrics.py` from that directory. The
+package reports throughput, latency percentiles, layered errors, container resources,
+and data quality without executing experiments.
+
 - `cmd/experiments/main.go`: The main entry point that orchestrates the execution of various scenarios.
 - `internal/api/`: Contains the HTTP client used to interact with the benchmark API and execute smart contracts.
 - `internal/config/`: Handles configuration loading from environment variables and `.env` files.
@@ -109,7 +115,13 @@ The system will:
 1. Generate a series of scenarios with varying parameters (events, parallels, consumers).
 2. Create an execution dataset and save its schedule to `scenarios.csv`.
 3. Sequentially execute each scenario repetition.
-4. Stop processing, query PostgreSQL, and atomically save the repetition as Zstandard-compressed Parquet before the next reset.
+4. Finish workload and resource monitoring, call `/rabbitmq/stop`, and stop the separate consumer container over SSH. RabbitMQ stays running.
+5. Inspect all RabbitMQ virtual hosts and queues (including dead-letter queues), save ready, unacknowledged, and total message counts to `<repetition>.queues.parquet`, and log each queue.
+6. Query PostgreSQL and atomically save event results before registering success and allowing the next reset.
+
+Queue snapshots are always collected, including when resource monitoring is disabled. They use the existing RabbitMQ and consumer SSH credentials and `RESOURCE_RABBITMQ_CONTAINER` / `RESOURCE_CONSUMER_CONTAINER` settings. Each snapshot row contains `execution_id`, `scenario_id`, `repetition`, `captured_at` (UTC), `virtual_host`, `queue_name`, `messages_ready`, `messages_unacknowledged`, and `messages`. Files use Zstandard compression and atomic publication; zero-count queues are included. Counts describe the post-shutdown capture, which can occur after the measurement cutoff; queues are never purged or drained.
+
+Shutdown and event export are attempted even when workload execution or monitoring fails. A shutdown failure prevents queue collection. Any shutdown, inspection, snapshot-write, or event-export failure aborts before reset and success registration, preserves saved artifacts, and reports combined errors. The next successful infrastructure reset recreates the consumer worker.
 
 ### Experiment dataset
 

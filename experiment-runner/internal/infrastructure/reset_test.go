@@ -105,8 +105,8 @@ func TestResetRunsServicesInOrderWithReadinessWaits(t *testing.T) {
 	if !reflect.DeepEqual(users, []string{"fabric-user", "rabbit-user", "postgres-user", "producer-user", "consumer-user"}) {
 		t.Fatalf("users = %v", users)
 	}
-	if !reflect.DeepEqual(ssh.calls[3].commands, []string{"cd /home/monitor/app && docker compose -f api.yml up api-producer --build -d"}) ||
-		!reflect.DeepEqual(ssh.calls[4].commands, []string{"cd /home/monitor/app && docker compose -f api.yml up api-consumer --build -d"}) {
+	if !reflect.DeepEqual(ssh.calls[3].commands, []string{"cd /home/monitor/app && docker compose -f producer.yml up --build --force-recreate -d"}) ||
+		!reflect.DeepEqual(ssh.calls[4].commands, []string{"cd /home/monitor/app && docker compose -f consumer.yml up --build --force-recreate -d"}) {
 		t.Fatalf("API commands = %v / %v", ssh.calls[3].commands, ssh.calls[4].commands)
 	}
 	if !reflect.DeepEqual(sleeps, []time.Duration{20 * time.Second, 60 * time.Second}) {
