@@ -18,6 +18,9 @@ Before running, edit **`PARQUET_FOLDER` immediately after the imports in
 `run_metrics.py`**. Set it to an execution folder or the experiments root. The
 default is the Go runner's `output/experiments`, resolved relative to the script,
 independent of the working directory. Set `REPORT_FOLDER` to your report directory.
+Each execution's reports are written to `REPORT_FOLDER/<execution-id>/`.
+When analyzing multiple executions, each folder contains only that execution's
+data and scenario summaries; the returned result still includes the combined analysis.
 Reports inside the input tree are excluded from discovery; the report directory
 cannot equal or contain the input directory.
 

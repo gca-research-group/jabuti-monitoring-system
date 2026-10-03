@@ -15,4 +15,6 @@ if __name__ == "__main__":
     print(f"Input: {result.manifest['input_folder']}")
     print(f"Executions: {', '.join(result.manifest['execution_ids'])}")
     print(f"Runs: {result.runs_summary.height}; reports: {REPORT_FOLDER.resolve()}")
-    print(f"Invalid runs: {result.data_quality['invalid_run_count']}; see data_quality.json")
+    for execution_id in result.manifest["execution_ids"]:
+        print(f"Report: {(REPORT_FOLDER / execution_id).resolve()}")
+    print(f"Invalid runs: {result.data_quality['invalid_run_count']}; see each data_quality.json")

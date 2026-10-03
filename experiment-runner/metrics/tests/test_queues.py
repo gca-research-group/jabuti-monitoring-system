@@ -90,8 +90,10 @@ def test_queue_details_totals_and_output_files(tmp_path):
     assert result.resources_summary.equals(baseline.resources_summary)
     assert result.queues_summary.height == 2
     assert result.manifest["dataset_metadata"][str(queue_path.resolve())]["schema_version"] == "1"
-    assert pl.read_parquet(tmp_path / "report/queues_summary.parquet").equals(result.queues_summary)
-    assert pl.read_csv(tmp_path / "report/queues_summary.csv").height == 2
+    assert pl.read_parquet(tmp_path / "report/execution/queues_summary.parquet").equals(
+        result.queues_summary
+    )
+    assert pl.read_csv(tmp_path / "report/execution/queues_summary.csv").height == 2
 
 
 @pytest.mark.parametrize(

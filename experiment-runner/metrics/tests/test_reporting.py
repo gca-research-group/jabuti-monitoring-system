@@ -44,11 +44,11 @@ def test_end_to_end_reproducible_empty_missing_and_corrupt(tmp_path):
     assert first.runs_summary["fabric_valid_transactions_per_second"].null_count() == 4
     assert first.scenario_summary["repetition_count"].to_list() == [2]
     assert first.scenario_summary["latency_p99_ms_available_repetitions"].to_list() == [1]
-    manifest = json.loads((tmp_path / "reports/analysis_manifest.json").read_text())
+    manifest = json.loads((tmp_path / "reports/execution/analysis_manifest.json").read_text())
     assert manifest["quantile_method"] == "linear"
     assert len(manifest["inputs"]) == 4
-    assert pl.read_parquet(tmp_path / "reports/runs_summary.parquet").height == 4
-    with (tmp_path / "reports/runs_summary.csv").open() as stream:
+    assert pl.read_parquet(tmp_path / "reports/execution/runs_summary.parquet").height == 4
+    with (tmp_path / "reports/execution/runs_summary.csv").open() as stream:
         assert len(list(csv.DictReader(stream))) == 4
 
 
@@ -67,6 +67,18 @@ def test_no_accidental_aggregation_across_executions(tmp_path):
     )
     assert result.scenario_summary.height == 1
     assert result.scenario_summary["repetition_count"][0] == 2
+    assert not (tmp_path / "reports/runs_summary.csv").exists()
+    for execution in ("e1", "e2"):
+        folder = tmp_path / "reports" / execution
+        runs = pl.read_parquet(folder / "runs_summary.parquet")
+        assert runs["execution_id"].to_list() == [execution]
+        summary = pl.read_csv(folder / "scenario_summary.csv")
+        assert summary["repetition_count"].to_list() == [1]
+        manifest = json.loads((folder / "analysis_manifest.json").read_text())
+        assert manifest["execution_ids"] == [execution]
+        assert len(manifest["inputs"]) == 2
+        quality = json.loads((folder / "data_quality.json").read_text())
+        assert [run["execution_id"] for run in quality["runs"]] == [execution]
 
 
 def test_mixed_schema_versions_normalize_duration_without_merging_runs(tmp_path):
