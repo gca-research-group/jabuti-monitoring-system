@@ -40,8 +40,8 @@ public class RabbitMQService {
         for (MessageListenerContainer container : registry.getListenerContainers()) {
             if (container instanceof SimpleMessageListenerContainer simpleContainer) {
                 simpleContainer.setPrefetchCount(20);
-                simpleContainer.setConcurrentConsumers(quantity);
                 simpleContainer.setMaxConcurrentConsumers(quantity);
+                simpleContainer.setConcurrentConsumers(quantity);
             }
         }
     }
