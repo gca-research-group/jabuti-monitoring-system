@@ -110,7 +110,20 @@ public class HyperledgerFabricService implements IBlockchainConnection<Gateway, 
                     .map(SmartContractClauseArgumentDto::getValue)
                     .toList();
 
-            byte[] result = contract.submitTransaction(clauseName, values.toArray(new String[0]));
+            var transaction = contract.newProposal(clauseName)
+                    .addArguments(values.toArray(new String[0]))
+                    .build()
+                    .endorse();
+
+            byte[] result = transaction.getResult();
+
+            var submitted = transaction.submitAsync();
+            var status = submitted.getStatus();
+
+            if (!status.isSuccessful()) {
+                throw new SmartContractInvokeException(new String(submitted.getResult(), StandardCharsets.UTF_8));
+            }
+
             return new String(result, StandardCharsets.UTF_8);
         } catch (Exception ex) {
             log.error("[HyperledgerFabricService >> invoke] Invocation failed", ex);
