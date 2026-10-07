@@ -85,6 +85,7 @@ Edit the `.env` file with your specific settings:
 - `<SERVER>_SSH_PORT`: SSH port for those infrastructure servers; defaults to `22`.
 - `API_PRODUCER_SSH_SERVER`, `API_PRODUCER_SSH_USER`, `API_PRODUCER_SSH_PORT`: Producer SSH host, required login, and port (defaults to `22`).
 - `API_CONSUMER_SSH_SERVER`, `API_CONSUMER_SSH_USER`, `API_CONSUMER_SSH_PORT`: Consumer SSH host, required login, and port (defaults to `22`).
+- Consumer recreation sets `RABBITMQ_LISTENER_CONCURRENCY`, `RABBITMQ_LISTENER_MAX_CONCURRENCY`, and `RABBITMQ_LISTENER_PREFETCH` to the current scenario's configured `consumers` count. The remote `consumer.yml` must forward all three variables in the service's `environment` section for Spring to resolve them.
 - `EXPERIMENT_OUTPUT_DIR`: Dataset root (defaults to `output/experiments`).
 - `HTTP_MAX_IDLE_CONNS`: Maximum idle connections retained across all API hosts (defaults to `3000`).
 - `HTTP_MAX_IDLE_CONNS_PER_HOST`: Maximum idle connections retained for one API host (defaults to `3000`).

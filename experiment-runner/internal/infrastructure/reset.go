@@ -38,7 +38,10 @@ func NewResetManager(registrar RegistrationClient, env *config.Env, client *api.
 	}
 }
 
-func (m *ResetManager) Reset() error {
+func (m *ResetManager) Reset(consumers int) error {
+	if consumers <= 0 {
+		return fmt.Errorf("consumer count must be positive")
+	}
 	if m.SSH == nil {
 		return fmt.Errorf("SSH command runner is required")
 	}
@@ -129,7 +132,8 @@ func (m *ResetManager) Reset() error {
 		return fmt.Errorf("reset API (producer): %w", err)
 	}
 	if err := m.SSH.Run(m.Env.APIConsumerSSHUser, net.JoinHostPort(m.Env.APIConsumerSSHServer, m.Env.APIConsumerSSHPort),
-		"cd /home/monitor/app && docker compose -f consumer.yml up --build --force-recreate -d",
+		fmt.Sprintf("cd /home/monitor/app && RABBITMQ_LISTENER_CONCURRENCY=%d RABBITMQ_LISTENER_MAX_CONCURRENCY=%d RABBITMQ_LISTENER_PREFETCH=%d RABBITMQ_CACHE_CHANNEL_SIZE=%d docker compose -f consumer.yml up --build --force-recreate -d",
+			consumers, consumers, consumers, consumers*4),
 	); err != nil {
 		return fmt.Errorf("reset API (consumer): %w", err)
 	}

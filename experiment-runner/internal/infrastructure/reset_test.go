@@ -86,7 +86,7 @@ func TestResetRunsServicesInOrderWithReadinessWaits(t *testing.T) {
 		Sleep:     func(duration time.Duration) { sleeps = append(sleeps, duration) },
 	}
 
-	if err := manager.Reset(); err != nil {
+	if err := manager.Reset(5); err != nil {
 		t.Fatalf("Reset() error = %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestResetRunsServicesInOrderWithReadinessWaits(t *testing.T) {
 		t.Fatalf("users = %v", users)
 	}
 	if !reflect.DeepEqual(ssh.calls[3].commands, []string{"cd /home/monitor/app && docker compose -f producer.yml up --build --force-recreate -d"}) ||
-		!reflect.DeepEqual(ssh.calls[4].commands, []string{"cd /home/monitor/app && docker compose -f consumer.yml up --build --force-recreate -d"}) {
+		!reflect.DeepEqual(ssh.calls[4].commands, []string{"cd /home/monitor/app && RABBITMQ_LISTENER_CONCURRENCY=5 RABBITMQ_LISTENER_MAX_CONCURRENCY=5 RABBITMQ_LISTENER_PREFETCH=5 docker compose -f consumer.yml up --build --force-recreate -d"}) {
 		t.Fatalf("API commands = %v / %v", ssh.calls[3].commands, ssh.calls[4].commands)
 	}
 	if !reflect.DeepEqual(sleeps, []time.Duration{20 * time.Second, 60 * time.Second}) {
@@ -164,7 +164,7 @@ func TestResetReturnsContextAndStopsAfterFailure(t *testing.T) {
 		Sleep:     func(time.Duration) {},
 	}
 
-	err := manager.Reset()
+	err := manager.Reset(5)
 	if err == nil || !strings.Contains(err.Error(), "reset RabbitMQ") {
 		t.Fatalf("Reset() error = %v", err)
 	}
@@ -185,7 +185,7 @@ func TestResetStopsWhenAPIStartFails(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ssh := &fakeCommandRunner{failAt: tc.failAt}
 			manager := ResetManager{SSH: ssh, Registrar: &fakeRegistrationClient{}, Env: testEnv(), Sleep: func(time.Duration) {}}
-			err := manager.Reset()
+			err := manager.Reset(5)
 			if err == nil || !strings.Contains(err.Error(), "reset API ("+tc.name+")") {
 				t.Fatalf("Reset() error = %v", err)
 			}
@@ -202,7 +202,7 @@ func TestResetRequiresNetworkConfigurationBeforeSSH(t *testing.T) {
 	ssh := &fakeCommandRunner{}
 	manager := ResetManager{SSH: ssh, Registrar: &fakeRegistrationClient{}, Env: env, Sleep: func(time.Duration) {}}
 
-	err := manager.Reset()
+	err := manager.Reset(5)
 	if err == nil || !strings.Contains(err.Error(), "FABRIC_PEER_PORT") {
 		t.Fatalf("Reset() error = %v", err)
 	}
@@ -228,7 +228,7 @@ func TestResetRequiresBothAPIRolesBeforeSSH(t *testing.T) {
 			tc.clear(env)
 			ssh := &fakeCommandRunner{}
 			manager := ResetManager{SSH: ssh, Registrar: &fakeRegistrationClient{}, Env: env, Sleep: func(time.Duration) {}}
-			err := manager.Reset()
+			err := manager.Reset(5)
 			if err == nil || !strings.Contains(err.Error(), tc.name) {
 				t.Fatalf("Reset() error = %v, want %s", err, tc.name)
 			}
@@ -248,7 +248,7 @@ func TestResetStopsWhenCredentialReadFails(t *testing.T) {
 		Sleep:     func(time.Duration) {},
 	}
 
-	err := manager.Reset()
+	err := manager.Reset(5)
 	if err == nil || !strings.Contains(err.Error(), "read Fabric CA certificate") {
 		t.Fatalf("Reset() error = %v", err)
 	}
@@ -267,7 +267,7 @@ func TestResetKeepsExistingIDsWhenSmartContractRegistrationFails(t *testing.T) {
 		Sleep: func(time.Duration) {},
 	}
 
-	err := manager.Reset()
+	err := manager.Reset(5)
 	if err == nil || !strings.Contains(err.Error(), "register smart contract") {
 		t.Fatalf("Reset() error = %v", err)
 	}

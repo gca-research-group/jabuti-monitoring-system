@@ -22,7 +22,7 @@ type APIClient interface {
 }
 
 type Infrastructure interface {
-	Reset() error
+	Reset(consumers int) error
 }
 
 type ResultExporter interface {
@@ -94,7 +94,7 @@ func (s *Suite) Run(parameters config.Parameters) error {
 			return err
 		}
 	}
-	if err := s.Infrastructure.Reset(); err != nil {
+	if err := s.Infrastructure.Reset(20); err != nil {
 		return fmt.Errorf("final infrastructure reset: %w", err)
 	}
 	s.Logf("experiment suite completed: executed=%d skipped=%d", len(pending), skipped)
@@ -143,13 +143,13 @@ func (s *Suite) runScenario(ctx context.Context, scenario runner.Scenario, index
 		scenario.Consumers,
 	)
 
-	if err := s.Infrastructure.Reset(); err != nil {
+	if err := s.Infrastructure.Reset(scenario.Consumers); err != nil {
 		return fmt.Errorf("reset infrastructure before scenario %d: %w", index+1, err)
 	}
 
-	if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
-		return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
-	}
+	// if err := s.Client.SetUpConsumers(s.Token, scenario.Consumers); err != nil {
+	// 	return fmt.Errorf("set up consumers for scenario %d: %w", index+1, err)
+	// }
 
 	s.Sleep(10 * time.Second)
 	if err := s.Executor.Prepare(scenario); err != nil {

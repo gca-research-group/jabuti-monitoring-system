@@ -40,7 +40,10 @@ type fakeInfrastructure struct {
 	failAt int
 }
 
-func (f *fakeInfrastructure) Reset() error {
+func (f *fakeInfrastructure) Reset(consumers int) error {
+	if consumers <= 0 {
+		return errors.New("consumer count must come from the scenario")
+	}
 	f.calls++
 	*f.events = append(*f.events, "reset")
 	if f.calls == f.failAt {
