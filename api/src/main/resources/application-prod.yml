@@ -45,7 +45,7 @@ spring:
     cache:
       channel:
         mode: CHANNEL
-        size: 500
+        size: ${RABBITMQ_CACHE_CHANNEL_SIZE:500}
         checkout-timeout: 2000ms
 
     # listener:

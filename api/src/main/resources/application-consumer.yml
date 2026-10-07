@@ -10,7 +10,7 @@ spring:
     listener:
       simple:
         default-requeue-rejected: false
-        concurrency: 20
-        max-concurrency: 20
-        prefetch: 20
+        concurrency: ${RABBITMQ_LISTENER_CONCURRENCY:20}
+        max-concurrency: ${RABBITMQ_LISTENER_MAX_CONCURRENCY:20}
+        prefetch: ${RABBITMQ_LISTENER_PREFETCH:20}
         acknowledge-mode: auto
