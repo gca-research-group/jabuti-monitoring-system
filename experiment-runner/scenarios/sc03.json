@@ -1,10 +1,10 @@
 {
   "events": [500],
-  "integrationProcesses": [3],
-  "consumers": [450],
+  "integrationProcesses": [1],
+  "consumers": [500],
   "lambda": 0.5,
-  "duration": 60000,
-  "maxStartDelay": 120,
   "warmupDuration": 30000,
+  "duration": 300000,
+  "maxStartDelay": 120,
   "repetitions": 1
 }

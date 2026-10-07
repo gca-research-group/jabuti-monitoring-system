@@ -1,7 +1,7 @@
 {
-  "events": [150],
+  "events": [50, 75, 100, 125, 150, 175, 200],
   "integrationProcesses": [1],
-  "consumers": [500],
+  "consumers": [50, 100, 150, 200],
   "lambda": 0.5,
   "warmupDuration": 30000,
   "duration": 300000,

@@ -4,6 +4,7 @@
   "consumers": [1, 10, 50],
   "lambda": 0.5,
   "duration": 300000,
-  "maxStartDelay": 0,
+  "maxStartDelay": 120,
+  "warmupDuration": 30000,
   "repetitions": 15
 }
