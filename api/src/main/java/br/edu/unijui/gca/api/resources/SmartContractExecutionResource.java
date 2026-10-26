@@ -1,18 +1,18 @@
 package br.edu.unijui.gca.api.resources;
 
-import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionDto;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionFilterDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.services.SmartContractExecutionService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @RestController()
 @RequestMapping("/smart-contract-execution")
 public class SmartContractExecutionResource extends BaseResource<
@@ -40,8 +40,4 @@ public class SmartContractExecutionResource extends BaseResource<
         this.service.removeAll();
     }
 
-    @PostMapping("/execute")
-    public UUID execute(@RequestBody SmartContractQueueInboundEventDto dto) {
-        return this.service.execute(dto);
-    }
 }

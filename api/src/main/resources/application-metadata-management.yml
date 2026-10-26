@@ -1,0 +1,4 @@
+# The custom migration bean is selected only by this role.
+spring:
+  liquibase:
+    enabled: true

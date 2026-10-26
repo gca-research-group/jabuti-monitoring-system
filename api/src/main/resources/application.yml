@@ -1,0 +1,19 @@
+spring:
+  main:
+    web-application-type: none
+  liquibase:
+    enabled: false
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: true
+        default-requeue-rejected: false
+        acknowledge-mode: auto
+
+---
+spring:
+  config:
+    activate:
+      on-profile: intake | metadata-management
+  main:
+    web-application-type: servlet

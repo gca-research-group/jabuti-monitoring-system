@@ -1,0 +1,2 @@
+# HTTP intake uses the shared web configuration; no queue listeners are selected.
+{}

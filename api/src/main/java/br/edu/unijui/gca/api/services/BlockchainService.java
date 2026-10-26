@@ -10,7 +10,6 @@ import br.edu.unijui.gca.api.mappers.BlockchainMapper;
 import br.edu.unijui.gca.api.repositories.BlockchainRepository;
 import br.edu.unijui.gca.api.specifications.BlockchainSpecification;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -41,9 +40,6 @@ public class BlockchainService extends BaseService<Blockchain, UUID, BlockchainF
     protected BlockchainMapper mapper() {
         return mapper;
     }
-
-    @Value("${app.backend-url}")
-    private String backendUrl;
 
     private HashMap<BlockchainPlatform, List<BlockchainConfigDto>> getConfigs() {
         var configs = new HashMap<BlockchainPlatform, List<BlockchainConfigDto>>();
@@ -77,7 +73,7 @@ public class BlockchainService extends BaseService<Blockchain, UUID, BlockchainF
         return configs.get(platform);
     }
 
-    public List<BlockchainPlatformDto> platforms() {
+    public List<BlockchainPlatformDto> platforms(String backendUrl) {
         var dummy = BlockchainPlatformDto.builder()
                 .id(BlockchainPlatform.DUMMY)
                 .name(BlockchainPlatform.DUMMY)

@@ -5,9 +5,11 @@ import br.edu.unijui.gca.api.dtos.AuthResponseDto;
 import br.edu.unijui.gca.api.services.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @RestController
 @RequestMapping("/auth")
 public class AuthResource {

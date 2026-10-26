@@ -6,11 +6,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 
+@Profile({"intake", "metadata-management"})
 @Component
 public class AuthenticationExceptionHandler implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper;

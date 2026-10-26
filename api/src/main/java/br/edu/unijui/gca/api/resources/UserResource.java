@@ -6,11 +6,13 @@ import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.mappers.UserMapper;
 import br.edu.unijui.gca.api.services.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @RestController()
 @RequestMapping("/user")
 public class UserResource extends BaseResource<User, Long, UserFilterDto, UserDto>{

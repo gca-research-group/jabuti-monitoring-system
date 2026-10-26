@@ -7,11 +7,13 @@ import br.edu.unijui.gca.api.mappers.UserMapper;
 import br.edu.unijui.gca.api.repositories.UserRepository;
 import br.edu.unijui.gca.api.specifications.UserSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
 @RequiredArgsConstructor
+@Profile({"intake", "metadata-management"})
 @Service
 public class UserService  extends BaseService<
         User,

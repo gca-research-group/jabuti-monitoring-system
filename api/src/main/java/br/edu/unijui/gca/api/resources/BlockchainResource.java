@@ -11,6 +11,8 @@ import br.edu.unijui.gca.api.mappers.BlockchainMapper;
 import br.edu.unijui.gca.api.services.BaseService;
 import br.edu.unijui.gca.api.services.BlockchainService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -20,6 +22,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @RestController()
 @RequestMapping("/blockchain")
 public class BlockchainResource extends BaseResource<Blockchain, UUID, BlockchainFilterDto, BlockchainDto> {
@@ -27,6 +30,9 @@ public class BlockchainResource extends BaseResource<Blockchain, UUID, Blockchai
     private final BlockchainService service;
 
     private final BlockchainMapper mapper;
+
+    @Value("${app.backend-url}")
+    private String backendUrl;
 
     @Override
     protected IMapper<Blockchain, BlockchainDto> mapper() {
@@ -45,6 +51,6 @@ public class BlockchainResource extends BaseResource<Blockchain, UUID, Blockchai
 
     @GetMapping("/platforms")
     public List<BlockchainPlatformDto> platforms() {
-        return service.platforms();
+        return service.platforms(backendUrl);
     }
 }

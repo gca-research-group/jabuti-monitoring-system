@@ -18,7 +18,7 @@ services:
       - -XX:+ExitOnOutOfMemoryError
       - -jar
       - /app/api.jar
-      - --spring.profiles.active=prod,consumer
+      - --spring.profiles.active=prod,preparation,execution,post-execution
 
     env_file:
       - .env

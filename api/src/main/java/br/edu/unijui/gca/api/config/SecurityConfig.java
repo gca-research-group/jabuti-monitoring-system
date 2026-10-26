@@ -6,6 +6,7 @@ import br.edu.unijui.gca.api.handlers.AuthenticationExceptionHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -23,6 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 @RequiredArgsConstructor
+@Profile({"intake", "metadata-management"})
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {

@@ -18,7 +18,6 @@ spring:
       max-lifetime: 1800000
 
   liquibase:
-    enabled: true
     change-log: classpath:db/changelog/db.changelog-master.xml
 
   jpa:
@@ -47,14 +46,6 @@ spring:
         mode: CHANNEL
         size: ${RABBITMQ_CACHE_CHANNEL_SIZE:500}
         checkout-timeout: 2000ms
-
-    # listener:
-    #   simple:
-    #     default-requeue-rejected: false
-    #     concurrency: 20
-    #     max-concurrency: 20
-    #     prefetch: 20
-    #     acknowledge-mode: auto
 
   threads:
     virtual:

@@ -7,9 +7,11 @@ import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
 import br.edu.unijui.gca.api.exceptions.ResourceNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @Service
 public class AuthService {
     private final PasswordService passwordService;

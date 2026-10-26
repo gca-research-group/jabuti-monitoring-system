@@ -3,9 +3,11 @@ package br.edu.unijui.gca.api.services;
 import br.edu.unijui.gca.api.exceptions.InvalidPasswordException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 @RequiredArgsConstructor
+@Profile("metadata-management")
 @Service
 public class PasswordService {
     private final PasswordEncoder passwordEncoder;

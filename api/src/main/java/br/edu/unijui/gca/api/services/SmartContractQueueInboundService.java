@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Profile("consumer")
+@Profile("preparation")
 @RequiredArgsConstructor
 @Slf4j
 @Component
@@ -45,7 +45,8 @@ public class SmartContractQueueInboundService {
 
     private final AmqpTemplate amqpTemplate;
 
-    @RabbitListener(queues = {QueueNames.INBOUND_QUEUE})
+    @RabbitListener(id = "preparation", queues = {QueueNames.INBOUND_QUEUE},
+            containerFactory = "preparationListenerContainerFactory")
     public void process(SmartContractQueueInboundEventDto event) {
         OffsetDateTime consumedAt = OffsetDateTime.now(ZoneOffset.UTC);
 

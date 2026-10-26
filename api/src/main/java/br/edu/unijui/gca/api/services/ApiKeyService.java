@@ -9,6 +9,7 @@ import br.edu.unijui.gca.api.repositories.ApiKeyRepository;
 import br.edu.unijui.gca.api.utils.HashUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.security.MessageDigest;
@@ -16,6 +17,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 @RequiredArgsConstructor
+@Profile({"intake", "metadata-management"})
 @Service
 public class ApiKeyService {
     private final ApiKeyRepository repository;

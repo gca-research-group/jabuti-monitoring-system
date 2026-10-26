@@ -1,16 +1,55 @@
 package br.edu.unijui.gca.api.config;
 
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.support.converter.JacksonJsonMessageConverter;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.amqp.autoconfigure.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
 
 @Configuration
 public class RabbitMQConfig {
+
+    @Bean
+    @Profile("preparation")
+    public SimpleRabbitListenerContainerFactory preparationListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer, ConnectionFactory connectionFactory,
+            Environment environment) {
+        return listenerContainerFactory(configurer, connectionFactory, environment, "preparation");
+    }
+
+    @Bean
+    @Profile("execution")
+    public SimpleRabbitListenerContainerFactory executionListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer, ConnectionFactory connectionFactory,
+            Environment environment) {
+        return listenerContainerFactory(configurer, connectionFactory, environment, "execution");
+    }
+
+    @Bean
+    @Profile("post-execution")
+    public SimpleRabbitListenerContainerFactory postExecutionListenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer, ConnectionFactory connectionFactory,
+            Environment environment) {
+        return listenerContainerFactory(configurer, connectionFactory, environment, "post-execution");
+    }
+
+    private SimpleRabbitListenerContainerFactory listenerContainerFactory(
+            SimpleRabbitListenerContainerFactoryConfigurer configurer, ConnectionFactory connectionFactory,
+            Environment environment, String role) {
+        var factory = new SimpleRabbitListenerContainerFactory();
+        configurer.configure(factory, connectionFactory);
+        factory.setMessageConverter(jacksonMessageConverter());
+        String prefix = "app.workers." + role + ".";
+        factory.setConcurrentConsumers(environment.getRequiredProperty(prefix + "concurrency", Integer.class));
+        factory.setMaxConcurrentConsumers(environment.getRequiredProperty(prefix + "max-concurrency", Integer.class));
+        factory.setPrefetchCount(environment.getRequiredProperty(prefix + "prefetch", Integer.class));
+        return factory;
+    }
 
     @Bean
     public JacksonJsonMessageConverter jacksonMessageConverter() {

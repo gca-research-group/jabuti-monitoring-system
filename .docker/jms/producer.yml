@@ -20,7 +20,7 @@ services:
       - -XX:+ExitOnOutOfMemoryError
       - -jar
       - /app/api.jar
-      - --spring.profiles.active=prod,producer
+      - --spring.profiles.active=prod,intake,metadata-management
 
     ports:
       - "0.0.0.0:8080:8080"

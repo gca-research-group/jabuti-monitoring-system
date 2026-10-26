@@ -22,7 +22,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
 
-@Profile("consumer")
+@Profile("execution")
 @RequiredArgsConstructor
 @Slf4j
 @Component
@@ -42,7 +42,8 @@ public class SmartContractQueueExecutionService {
 
     private final AmqpTemplate amqpTemplate;
 
-    @RabbitListener(queues = {QueueNames.EXECUTION_QUEUE})
+    @RabbitListener(id = "execution", queues = {QueueNames.EXECUTION_QUEUE},
+            containerFactory = "executionListenerContainerFactory")
     public void process(SmartContractPayloadDto payload) {
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(payload.getId());
 

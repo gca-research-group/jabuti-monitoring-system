@@ -24,7 +24,7 @@ import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.UUID;
 
-@Profile("consumer")
+@Profile("post-execution")
 @RequiredArgsConstructor
 @Slf4j
 @Component
@@ -34,7 +34,8 @@ public class SmartContractQueueOutboundService {
 
     private final SmartContractExecutionService smartContractExecutionService;
 
-    @RabbitListener(queues = {QueueNames.OUTBOUND_QUEUE})
+    @RabbitListener(id = "post-execution", queues = {QueueNames.OUTBOUND_QUEUE},
+            containerFactory = "postExecutionListenerContainerFactory")
     public void process(SmartContractExecutionDto event) {
         SmartContractExecution smartContractExecution = smartContractExecutionService.findById(event.getId());
 
