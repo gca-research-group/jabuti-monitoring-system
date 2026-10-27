@@ -1,5 +1,6 @@
 package br.edu.unijui.gca.api;
 
+import br.edu.unijui.gca.api.dtos.HyperledgerFabricConfigDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseArgumentDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
@@ -11,7 +12,10 @@ import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.BlockchainPlatform;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
+import br.edu.unijui.gca.api.execution.adapters.rabbitmq.ContractExecutionListener;
+import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.filters.AuthFilter;
+import br.edu.unijui.gca.api.interfaces.IBlockchainConnection;
 import br.edu.unijui.gca.api.preparation.adapters.rabbitmq.ExecutionPreparationListener;
 import br.edu.unijui.gca.api.repositories.*;
 import br.edu.unijui.gca.api.services.JwtService;
@@ -118,6 +122,88 @@ class ApiApplicationTests {
                 assertThat(payload.getClauseArguments()).isEqualTo(event.getClauseArguments());
             }
             verify(executions, times(3)).save(any(SmartContractExecution.class));
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest
+    @ValueSource(strings = {"success", "invocation-failure", "publication-failure", "bad-config"})
+    void executionAdaptersPreserveInvocationConversionOutcomesAndRejection(String scenario) {
+        var factory = mock(BlockchainConnectionFactory.class);
+        var connection = (IBlockchainConnection<Object, HyperledgerFabricConfigDto>) mock(IBlockchainConnection.class);
+        doReturn(HyperledgerFabricConfigDto.class).when(factory).getConfigType(BlockchainPlatform.HYPERLEDGER_FABRIC);
+        when(factory.<Object, HyperledgerFabricConfigDto>getInstance(BlockchainPlatform.HYPERLEDGER_FABRIC)).thenReturn(connection);
+        runner.withPropertyValues("spring.profiles.active=execution")
+                .withBean(BlockchainConnectionFactory.class, () -> factory).run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(BlockchainConnectionFactory.class)).isSameAs(factory);
+            var payload = SmartContractPayloadDto.builder().id(UUID.randomUUID())
+                    .blockchainId(UUID.randomUUID()).smartContractId(UUID.randomUUID()).clauseName("recordReading")
+                    .clauseArguments(List.of(new SmartContractClauseArgumentDto("reading", "42"))).build();
+            var execution = new SmartContractExecution();
+            execution.setId(payload.getId());
+            execution.setPayload(payload);
+            execution.setStatus(SmartContractExecutionStatus.PROCESSING);
+            execution.setTimestamps(new HashMap<>());
+            var blockchain = new Blockchain();
+            blockchain.setId(payload.getBlockchainId());
+            blockchain.setPlatform(BlockchainPlatform.HYPERLEDGER_FABRIC);
+            blockchain.setParameters(Map.of("mspId", scenario.equals("bad-config") ? Map.of("invalid", true) : "Org1MSP",
+                    "channelName", "mychannel"));
+            var contract = new SmartContract();
+            contract.setId(payload.getSmartContractId());
+            contract.setName("temperature-contract");
+            var executions = context.getBean(SmartContractExecutionRepository.class);
+            var contracts = context.getBean(SmartContractRepository.class);
+            when(executions.findById(payload.getId())).thenReturn(Optional.of(execution));
+            when(executions.save(any(SmartContractExecution.class))).thenAnswer(call -> call.getArgument(0));
+            when(context.getBean(BlockchainRepository.class).findById(payload.getBlockchainId())).thenReturn(Optional.of(blockchain));
+            when(contracts.findById(payload.getSmartContractId())).thenReturn(Optional.of(contract));
+            when(connection.invoke(eq(payload.getBlockchainId()), any(HyperledgerFabricConfigDto.class),
+                    eq("temperature-contract"), eq("recordReading"), eq(payload.getClauseArguments()))).thenReturn("receipt-42");
+            var publisher = context.getBean(RabbitTemplate.class);
+            if (scenario.equals("invocation-failure")) {
+                when(connection.invoke(any(), any(), any(), any(), any())).thenThrow(new IllegalStateException("invocation failed"));
+            } else if (scenario.equals("publication-failure")) {
+                doThrow(new IllegalStateException("outcome publication failed")).doNothing().when(publisher)
+                        .convertAndSend(eq("smart-contract.exchange"), eq("smart-contract.outbound.routing-key"), any(Object.class));
+            }
+            var listener = context.getBean(ContractExecutionListener.class);
+
+            if (scenario.equals("success")) {
+                listener.process(payload);
+            } else {
+                assertThatThrownBy(() -> listener.process(payload)).isInstanceOf(AmqpRejectAndDontRequeueException.class);
+            }
+
+            var outcomes = ArgumentCaptor.forClass(Object.class);
+            verify(publisher, times(scenario.equals("publication-failure") ? 2 : 1)).convertAndSend(
+                    eq("smart-contract.exchange"), eq("smart-contract.outbound.routing-key"), outcomes.capture());
+            var lastOutcome = (SmartContractExecutionDto) outcomes.getValue();
+            assertThat(lastOutcome.getId()).isEqualTo(payload.getId());
+            assertThat(lastOutcome.getPayload().getClauseArguments()).isEqualTo(payload.getClauseArguments());
+            assertThat(lastOutcome.getStatus()).isEqualTo(scenario.equals("success")
+                    ? SmartContractExecutionStatus.PROCESSED : SmartContractExecutionStatus.FAILED);
+            if (scenario.equals("success")) {
+                assertThat(lastOutcome.getResult()).isEqualTo("receipt-42");
+            } else if (scenario.equals("publication-failure")) {
+                assertThat(((SmartContractExecutionDto) outcomes.getAllValues().getFirst()).getStatus())
+                        .isEqualTo(SmartContractExecutionStatus.PROCESSED);
+                assertThat(lastOutcome.getResult()).isEqualTo("outcome publication failed");
+            } else if (scenario.equals("invocation-failure")) {
+                assertThat(lastOutcome.getResult()).isEqualTo("invocation failed");
+            }
+            if (scenario.equals("bad-config")) {
+                verifyNoInteractions(connection);
+                verify(contracts, never()).findById(any());
+                verify(factory, never()).getInstance(any());
+            } else {
+                var config = ArgumentCaptor.forClass(HyperledgerFabricConfigDto.class);
+                verify(connection).invoke(eq(payload.getBlockchainId()), config.capture(), eq("temperature-contract"),
+                        eq("recordReading"), eq(payload.getClauseArguments()));
+                assertThat(config.getValue().getMspId()).isEqualTo("Org1MSP");
+                assertThat(config.getValue().getChannelName()).isEqualTo("mychannel");
+            }
         });
     }
 
