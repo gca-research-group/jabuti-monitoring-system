@@ -4,7 +4,7 @@
   class="d-flex flex-column col-lg-6 col-md-12"
 >
   <div class="d-flex justify-content-center flex-wrap" style="gap: 32px">
-    <app-image-uploader formControlName="photo" label="photo" />
+    <app-input formControlName="photo" label="photo" />
     <div class="d-flex flex-column justify-content-center col gap-3">
       <app-input formControlName="name" label="name" class="col" />
 
@@ -23,6 +23,8 @@
       />
     </div>
   </div>
+
+  <app-input formControlName="remarks" label="remarks" />
 
   <app-status-selector formControlName="status" class="col" />
 

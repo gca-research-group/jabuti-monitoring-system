@@ -1,8 +1,8 @@
 package br.edu.unijui.gca.api;
 
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
-import br.edu.unijui.gca.api.dtos.AuthResponseDto;
-import br.edu.unijui.gca.api.dtos.apikey.ApiKeyDto;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.LoginResponse;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.CreateApiKeyResponse;
 import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.entities.SmartContract;
@@ -148,7 +148,7 @@ class WebApplicationProfileTests {
             var login = mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
                             .content("{\"email\":\"researcher@example.test\",\"password\":\"correct\"}"))
                     .andExpect(status().isOk()).andReturn();
-            var body = new ObjectMapper().readValue(login.getResponse().getContentAsString(), AuthResponseDto.class);
+            var body = new ObjectMapper().readValue(login.getResponse().getContentAsString(), LoginResponse.class);
             assertThat(body.id()).isEqualTo(7L);
             assertThat(body.email()).isEqualTo(user.getEmail());
             assertThat(body.accessToken()).isNotBlank();
@@ -163,6 +163,7 @@ class WebApplicationProfileTests {
             mvc.perform(get("/user/7")).andExpect(status().isBadRequest());
             var managed = mvc.perform(get("/user/7").header("Authorization", "Bearer " + body.accessToken()))
                     .andExpect(status().isOk()).andReturn();
+            assertThat(new ObjectMapper().readTree(managed.getResponse().getContentAsString()).has("password")).isFalse();
             assertThat(new ObjectMapper().readTree(managed.getResponse().getContentAsString()).path("name").asText())
                     .isEqualTo("Researcher");
         });
@@ -196,10 +197,10 @@ class WebApplicationProfileTests {
             var created = mvc.perform(post("/api-key").header("Authorization", "Bearer " + accessToken)
                             .contentType(MediaType.APPLICATION_JSON).content("{\"userId\":7}"))
                     .andExpect(status().isOk()).andReturn();
-            var response = new ObjectMapper().readValue(created.getResponse().getContentAsString(), ApiKeyDto.class);
+            var response = new ObjectMapper().readValue(created.getResponse().getContentAsString(), CreateApiKeyResponse.class);
             assertThat(response.userId()).isEqualTo(7L);
-            assertThat(response.keyHash()).matches("jms_[A-Za-z0-9_-]{8}\\.[A-Za-z0-9_-]{43}");
-            String[] parts = response.keyHash().substring(4).split("\\.");
+            assertThat(response.apiKey()).matches("jms_[A-Za-z0-9_-]{8}\\.[A-Za-z0-9_-]{43}");
+            String[] parts = response.apiKey().substring(4).split("\\.");
             var saved = ArgumentCaptor.forClass(ApiKey.class);
             verify(repository).save(saved.capture());
             assertThat(saved.getValue().getUser()).isSameAs(user);
@@ -208,7 +209,7 @@ class WebApplicationProfileTests {
                     .digest(parts[1].getBytes(StandardCharsets.UTF_8)));
             when(repository.findByKeyPrefix(parts[0])).thenReturn(Optional.of(saved.getValue()));
             for (int request = 0; request < 2; request++) {
-                mvc.perform(post("/smart-contract-execution/execute").header("X-API-Key", response.keyHash())
+                mvc.perform(post("/smart-contract-execution/execute").header("X-API-Key", response.apiKey())
                                 .contentType(MediaType.APPLICATION_JSON).content("{}"))
                         .andExpect(status().isOk());
             }
@@ -239,6 +240,7 @@ class WebApplicationProfileTests {
                     .andExpect(status().isOk()).andReturn();
             var list = new ObjectMapper().readTree(listed.getResponse().getContentAsString());
             assertThat(list.path("data").get(0).path("name").asText()).isEqualTo("Researcher");
+            assertThat(list.path("data").get(0).has("password")).isFalse();
             assertThat(list.path("hasMore").asBoolean()).isTrue();
             var pageable = ArgumentCaptor.forClass(Pageable.class);
             verify(query).slice(pageable.capture());
@@ -267,6 +269,114 @@ class WebApplicationProfileTests {
         });
     }
 
+    @Test
+    void identityRejectsInvalidInputsWithoutReturningCredentialValues() {
+        runner.withPropertyValues("spring.profiles.active=metadata-management").run(context -> {
+            var user = existingUser(context.getSourceApplicationContext());
+            var mvc = mvc(context.getSourceApplicationContext());
+            String authorization = "Bearer " + context.getBean(TokenOperations.class).generateAccessToken(user);
+            String[][] invalid = {
+                    {"/user", "{\"name\":\" \",\"email\":\"bad\",\"password\":\"credential-marker\"}"},
+                    {"/user", "{\"name\":\"Name\",\"email\":\"a@example.test\"}"},
+                    {"/user", "{\"name\":\"Name\",\"email\":\"a@example.test\",\"password\":\"\"}"},
+                    {"/user", "{\"id\":8,\"password\":\"credential-marker\"}"},
+                    {"/user", "{\"unexpected\":\"credential-marker\"}"},
+                    {"/auth/login", "{}"},
+                    {"/auth/login", "{\"email\":\"bad\",\"password\":\"credential-marker\"}"},
+                    {"/auth/login", "{\"email\":\"a@example.test\",\"password\":null}"},
+                    {"/auth/login", "{\"email\":\"a@example.test\",\"password\":\"credential-marker\",\"id\":1}"},
+                    {"/api-key", "{}"},
+                    {"/api-key", "{\"userId\":null}"},
+                    {"/api-key", "{\"userId\":7,\"keyHash\":\"credential-marker\"}"}
+            };
+            for (String[] request : invalid) {
+                var result = mvc.perform(post(request[0]).header("Authorization", authorization)
+                                .contentType(MediaType.APPLICATION_JSON).content(request[1]))
+                        .andExpect(status().isBadRequest()).andReturn();
+                String response = result.getResponse().getContentAsString();
+                assertThat(response).doesNotContain("credential-marker");
+                assertThat(new ObjectMapper().readTree(response).path("message").asText()).isNotBlank();
+            }
+            String[] updates = {"{\"id\":8}", "{\"password\":null}", "{\"password\":\"\"}",
+                    "{\"name\":null}", "{\"name\":\" \"}", "{\"email\":null}", "{\"email\":\"bad\"}",
+                    "{\"status\":null}", "{\"photo\":\"" + "x".repeat(256) + "\"}", "{\"accessToken\":\"credential-marker\"}"};
+            for (String body : updates) {
+                var result = mvc.perform(put("/user/7").header("Authorization", authorization)
+                                .contentType(MediaType.APPLICATION_JSON).content(body))
+                        .andExpect(status().isBadRequest()).andReturn();
+                assertThat(result.getResponse().getContentAsString()).doesNotContain("credential-marker");
+            }
+            verify(context.getBean(UserRepository.class), never()).save(any());
+            verify(context.getBean(ApiKeyRepository.class), never()).save(any());
+        });
+    }
+    @Test
+    void userCreationAndPartialUpdatesKeepPasswordsPrivateAndUsableForLogin() {
+        runner.withPropertyValues("spring.profiles.active=metadata-management").run(context -> {
+            var admin = existingUser(context.getSourceApplicationContext());
+            var mvc = mvc(context.getSourceApplicationContext());
+            var json = new ObjectMapper();
+            String authorization = "Bearer " + context.getBean(TokenOperations.class).generateAccessToken(admin);
+            var users = context.getBean(UserRepository.class);
+            var stored = new java.util.concurrent.atomic.AtomicReference<User>();
+            when(users.save(any(User.class))).thenAnswer(call -> {
+                User user = call.getArgument(0);
+                if (user.getId() == null) user.setId(8L);
+                stored.set(user);
+                return user;
+            });
+            when(users.findById(8L)).thenAnswer(call -> Optional.ofNullable(stored.get()));
+            when(users.findByEmail("new@example.test")).thenAnswer(call -> Optional.ofNullable(stored.get()));
+            String exactPassword = "  exact password  ";
+            var created = mvc.perform(post("/user").header("Authorization", authorization)
+                            .contentType(MediaType.APPLICATION_JSON).content("""
+                                    {"name":"New User","email":"new@example.test","password":"  exact password  ",
+                                     "photo":"any optional string","remarks":"original"}
+                                    """))
+                    .andExpect(status().isOk()).andReturn();
+            var body = json.readTree(created.getResponse().getContentAsString());
+            assertThat(body.path("id").asLong()).isEqualTo(8L);
+            assertThat(body.path("status").asBoolean()).isTrue();
+            assertThat(body.has("password")).isFalse();
+            assertThat(created.getResponse().getContentAsString()).doesNotContain(exactPassword);
+            mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"new@example.test\",\"password\":\"  exact password  \"}"))
+                    .andExpect(status().isOk());
+            mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"new@example.test\",\"password\":\"exact password\"}"))
+                    .andExpect(status().isBadRequest());
+            var updated = mvc.perform(put("/user/8").header("Authorization", authorization)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Renamed\",\"photo\":null,\"remarks\":null}"))
+                    .andExpect(status().isOk()).andReturn();
+            body = json.readTree(updated.getResponse().getContentAsString());
+            assertThat(body.path("name").asText()).isEqualTo("Renamed");
+            assertThat(body.path("email").asText()).isEqualTo("new@example.test");
+            assertThat(body.path("status").asBoolean()).isTrue();
+            assertThat(body.path("photo").isNull()).isTrue();
+            assertThat(body.path("remarks").isNull()).isTrue();
+            assertThat(body.has("password")).isFalse();
+            mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"new@example.test\",\"password\":\"  exact password  \"}"))
+                    .andExpect(status().isOk());
+            mvc.perform(put("/user/8").header("Authorization", authorization)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\" replacement \"}"))
+                    .andExpect(status().isOk());
+            mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"new@example.test\",\"password\":\" replacement \"}"))
+                    .andExpect(status().isOk());
+            mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"new@example.test\",\"password\":\"  exact password  \"}"))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(put("/user/8").header("Authorization", authorization)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"status\":false}"))
+                    .andExpect(status().isOk());
+            var read = mvc.perform(get("/user/8").header("Authorization", authorization))
+                    .andExpect(status().isOk()).andReturn();
+            body = json.readTree(read.getResponse().getContentAsString());
+            assertThat(body.path("status").asBoolean()).isFalse();
+            assertThat(body.has("password")).isFalse();
+        });
+    }
     private MockMvc mvc(WebApplicationContext context) {
         return MockMvcBuilders.webAppContextSetup(context)
                 .addFilters(context.getBean("springSecurityFilterChain", Filter.class), context.getBean(AuthFilter.class)).build();

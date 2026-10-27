@@ -24,7 +24,6 @@ describe('User store', () => {
       photo: '',
       status: true,
       isAuthenticated: false,
-      role: '',
     };
     store.dispatch(new AddCurrentUserAction(expected));
   });

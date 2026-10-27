@@ -1,6 +1,6 @@
 package br.edu.unijui.gca.api.identity.application;
 
-import br.edu.unijui.gca.api.dtos.AuthResponseDto;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.LoginResponse;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.ExpiredTokenException;
 import br.edu.unijui.gca.api.exceptions.InvalidTokenException;
@@ -24,7 +24,7 @@ public class AuthService {
     private final TokenOperations jwtService;
 
 
-    public AuthResponseDto authenticate(String email, String password, RefreshTokenCookies response) {
+    public LoginResponse authenticate(String email, String password, RefreshTokenCookies response) {
         User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
 
         passwordService.validatePassword(password, user.getPassword());
@@ -33,10 +33,10 @@ public class AuthService {
 
         String accessToken = jwtService.generateAccessToken(user);
 
-        return AuthResponseDto.from(user, accessToken);
+        return LoginResponse.from(user, accessToken);
     }
 
-    public AuthResponseDto refresh(RefreshTokenCookies response, String token) {
+    public LoginResponse refresh(RefreshTokenCookies response, String token) {
         try {
             String email = jwtService.getSubject(token);
             User user = userService.findByEmail(email).orElseThrow(ResourceNotFoundException::new);
@@ -48,7 +48,7 @@ public class AuthService {
             response.setRefreshToken(user);
             String accessToken = jwtService.generateAccessToken(user);
 
-            return AuthResponseDto.from(user, accessToken);
+            return LoginResponse.from(user, accessToken);
         } catch (ExpiredTokenException e) {
             response.removeRefreshToken();
             throw e;

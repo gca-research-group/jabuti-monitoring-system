@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.identity.application;
 import br.edu.unijui.gca.api.identity.application.ports.ApiKeyStore;
 import br.edu.unijui.gca.api.identity.application.ports.UserStore;
 
-import br.edu.unijui.gca.api.dtos.apikey.ApiKeyDto;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.CreateApiKeyResponse;
 import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.entities.User;
 import br.edu.unijui.gca.api.exceptions.ApiKeyNotFoundException;
@@ -29,7 +29,7 @@ public class ApiKeyService {
 
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public ApiKeyDto create(Long userId) {
+    public CreateApiKeyResponse create(Long userId) {
 
         User user = userService.findById(userId);
 
@@ -48,7 +48,7 @@ public class ApiKeyService {
 
         repository.save(apiKey);
 
-        return new ApiKeyDto(userId, rawApiKey);
+        return new CreateApiKeyResponse(userId, rawApiKey);
     }
 
     private String generatePrefix() {

@@ -1,6 +1,7 @@
 package br.edu.unijui.gca.api.metadata.adapters.http;
 
-import br.edu.unijui.gca.api.dtos.apikey.ApiKeyDto;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.CreateApiKeyRequest;
+import br.edu.unijui.gca.api.identity.adapters.http.dto.CreateApiKeyResponse;
 import br.edu.unijui.gca.api.identity.application.ApiKeyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -18,7 +19,7 @@ public class ApiKeyResource {
     private final ApiKeyService service;
 
     @PostMapping
-    public ApiKeyDto create(@RequestBody ApiKeyDto request) {
-        return service.create(request.userId());
+    public CreateApiKeyResponse create(@jakarta.validation.Valid @RequestBody CreateApiKeyRequest request) {
+        return service.create(request.getUserId());
     }
 }

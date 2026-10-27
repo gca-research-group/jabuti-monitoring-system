@@ -20,7 +20,7 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { provideRouter } from '@angular/router';
 
 import { requestInterceptor } from '@app/interceptors';
-import { UserState } from '@app/state/current-user';
+import { CurrentUserState } from '@app/state/current-user';
 
 const httpLoaderFactory: (http: HttpClient) => TranslateHttpLoader = (
   http: HttpClient,
@@ -29,7 +29,7 @@ const httpLoaderFactory: (http: HttpClient) => TranslateHttpLoader = (
 export const appConfig: ApplicationConfig = {
   providers: [
     provideStore(
-      [UserState],
+      [CurrentUserState],
       withNgxsStoragePlugin({
         keys: '*',
       }),

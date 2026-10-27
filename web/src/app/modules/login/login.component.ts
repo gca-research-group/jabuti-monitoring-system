@@ -45,7 +45,12 @@ export class LoginComponent {
 
     this.authService.login(this.form.value as unknown as Login).subscribe({
       next: response => {
-        this.currentUserService.add({ ...response, isAuthenticated: true });
+        this.currentUserService.add({
+          ...response,
+          photo: '',
+          status: false,
+          isAuthenticated: true,
+        });
         void this.router.navigate(['/']);
       },
       error: error => {

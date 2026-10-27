@@ -13,7 +13,7 @@ import { IconStatusComponent } from '@app/components/icon-status';
 import { InputComponent } from '@app/components/input';
 import { TableComponent } from '@app/components/table';
 import { BaseListDirective } from '@app/directives/base';
-import { Column, ColumnType, User } from '@app/models';
+import { Column, ColumnType, UserResponse } from '@app/models';
 import { UserService } from '@app/services/user';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
 import { ExpansionPanelComponent } from '@app/components/expansion-panel';
@@ -81,7 +81,7 @@ const COLUMNS: Column[] = [
     },
   ],
 })
-export class UserListComponent extends BaseListDirective<User> {
+export class UserListComponent extends BaseListDirective<UserResponse> {
   columns = COLUMNS;
 
   displayedColumns = COLUMNS.map(column => column.id);

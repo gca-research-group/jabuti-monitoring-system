@@ -1,7 +1,7 @@
 import { TranslateModule } from '@ngx-translate/core';
 import { finalize } from 'rxjs';
 
-import { Component } from '@angular/core';
+import { Component, effect, inject } from '@angular/core';
 import {
   FormControl,
   FormsModule,
@@ -15,12 +15,15 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { ButtonComponent } from '@app/components/button';
 import { InputComponent } from '@app/components/input';
 import { BaseFormDirective } from '@app/directives/base';
-import { User } from '@app/models';
+import {
+  CreateUserRequest,
+  UpdateUserRequest,
+  UserResponse,
+} from '@app/models';
 import { UserService } from '@app/services/user';
 import { BREADCRUMB, CRUD_SERVICE } from '@app/tokens';
-import { removeEmptyKeys } from '@app/utils';
+
 import { StatusSelectorComponent } from '@app/components/status-selector';
-import { ImageUploaderComponent } from '@app/components/image-uploader';
 
 @Component({
   selector: 'app-user-form',
@@ -37,7 +40,7 @@ import { ImageUploaderComponent } from '@app/components/image-uploader';
     MatExpansionModule,
 
     ButtonComponent,
-    ImageUploaderComponent,
+
     InputComponent,
     StatusSelectorComponent,
   ],
@@ -62,7 +65,7 @@ import { ImageUploaderComponent } from '@app/components/image-uploader';
   ],
 })
 export class UserFormComponent extends BaseFormDirective<
-  User,
+  UserResponse,
   {
     id: FormControl;
     name: FormControl;
@@ -70,15 +73,25 @@ export class UserFormComponent extends BaseFormDirective<
     photo: FormControl;
     password: FormControl;
     status: FormControl;
+    remarks: FormControl;
   }
 > {
-  preview: string | null = null;
+  private readonly userService = inject<UserService>(CRUD_SERVICE);
 
   constructor() {
     super();
-    this.buildForm();
-    this.form.get('photo')?.valueChanges.subscribe((value: string) => {
-      this.preview = value;
+    effect(() => {
+      this.form.controls.password.setValidators(
+        this.id() ? [] : [Validators.required],
+      );
+      this.form.controls.password.updateValueAndValidity({ emitEvent: false });
+    });
+    this.form.controls.photo.valueChanges.subscribe(() => {
+      const photo = this.form.controls.photo;
+      photo.setValidators(
+        this.id() && !photo.dirty ? [] : [Validators.maxLength(255)],
+      );
+      photo.updateValueAndValidity({ emitEvent: false });
     });
   }
 
@@ -86,11 +99,20 @@ export class UserFormComponent extends BaseFormDirective<
     this.form = this.formBuilder.group({
       id: null,
       name: new FormControl(null, Validators.required),
-      email: new FormControl(null, Validators.required),
-      photo: null,
+      email: new FormControl(null, [Validators.required, Validators.email]),
+      photo: new FormControl(null, Validators.maxLength(255)),
       password: new FormControl(null),
-      status: null,
+      status: true,
+      remarks: null,
     });
+  }
+
+  protected override patchValue(item: UserResponse) {
+    super.patchValue(item);
+    this.form.controls.password.reset(null);
+    this.form.markAsPristine();
+    this.form.controls.photo.clearValidators();
+    this.form.controls.photo.updateValueAndValidity({ emitEvent: false });
   }
 
   override save() {
@@ -99,9 +121,28 @@ export class UserFormComponent extends BaseFormDirective<
       return;
     }
 
+    const id = this.id();
+    const values = this.form.getRawValue();
+    const request = Object.fromEntries(
+      Object.entries(values).filter(
+        ([key]) =>
+          key !== 'id' &&
+          (!id ||
+            this.form.controls[key as keyof typeof this.form.controls].dirty),
+      ),
+    );
+    if (request['photo'] === '') request['photo'] = null;
+    // An untouched edit password is omitted. A supplied empty password stays invalid.
+    if (id && !this.form.controls.password.dirty) delete request['password'];
+    if (id && this.form.controls.password.dirty && !values.password) {
+      this.toastr.warning('INVALID_FORM');
+      return;
+    }
+    const save = id
+      ? this.userService.update(id, request as UpdateUserRequest)
+      : this.userService.create(request as unknown as CreateUserRequest);
     this.loading = true;
-    this.service
-      .save(removeEmptyKeys(this.form.value))
+    save
       .pipe(
         finalize(() => {
           this.loading = false;

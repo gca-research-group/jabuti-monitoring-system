@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 
-import { Login, User } from '@app/models';
+import { Login, LoginResponse } from '@app/models';
 
 import { environment } from '../../../environments/environment';
 
@@ -13,11 +13,14 @@ export class AuthService {
   private readonly httpClient = inject(HttpClient);
 
   login(data: Login) {
-    return this.httpClient.post<User>(`${this.apiUrl}/auth/login`, data);
+    return this.httpClient.post<LoginResponse>(
+      `${this.apiUrl}/auth/login`,
+      data,
+    );
   }
 
   refresh() {
-    return this.httpClient.post<{ accessToken: string }>(
+    return this.httpClient.post<LoginResponse>(
       `${this.apiUrl}/auth/refresh`,
       null,
     );
