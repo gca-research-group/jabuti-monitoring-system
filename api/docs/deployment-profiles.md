@@ -1,5 +1,7 @@
 # Deployment profiles
 
+The execution workflow lives under `br.edu.unijui.gca.api.pipeline`, with `preparation`, `execution`, and `postexecution` stage packages. Pipeline also owns lifecycle contracts, execution persistence, and event publishing; stages access metadata through its public stores. Package ownership does not change the independently selectable Spring profiles below.
+
 Build one executable JAR with `mvn clean package`. Select roles at runtime with `--spring.profiles.active`; Maven build profiles are not used.
 
 Run commands from `api/` with JDK 26 and Maven. Copy the resulting `target/api-0.0.1-SNAPSHOT.jar` to every deployment; every role uses the same release. The `.jar.original` file is Maven's unrepackaged intermediate, not another deployment artifact. Select at least one role explicitly: the default configuration starts no application entry points.
