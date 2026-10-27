@@ -4,6 +4,9 @@ import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.config.RabbitMQConfig;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
+import br.edu.unijui.gca.api.pipeline.PipelineConfiguration;
+import br.edu.unijui.gca.api.preparation.PreparationConfiguration;
+import br.edu.unijui.gca.api.preparation.adapters.rabbitmq.ExecutionPreparationListener;
 import br.edu.unijui.gca.api.services.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -98,7 +101,7 @@ class ListenerProfileTests {
     }
 
     @EnableRabbit
-    @Import({RabbitMQConfig.class, SmartContractQueueInboundService.class,
+    @Import({RabbitMQConfig.class, PipelineConfiguration.class, PreparationConfiguration.class, ExecutionPreparationListener.class,
             SmartContractQueueExecutionService.class, SmartContractQueueOutboundService.class})
     static class Listeners {
     }

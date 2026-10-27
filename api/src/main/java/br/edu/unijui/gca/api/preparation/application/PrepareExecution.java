@@ -1,7 +1,5 @@
-package br.edu.unijui.gca.api.services;
+package br.edu.unijui.gca.api.preparation.application;
 
-
-import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseArgumentDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
@@ -15,14 +13,9 @@ import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseArgumentException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseException;
-import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.AmqpRejectAndDontRequeueException;
-import org.springframework.amqp.core.AmqpTemplate;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Component;
+import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
+import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -30,27 +23,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Profile("preparation")
-@RequiredArgsConstructor
-@Slf4j
-@Component
-public class SmartContractQueueInboundService {
-    private final SmartContractService smartContractService;
+public class PrepareExecution {
 
-    private final BlockchainService blockchainService;
+    private final ExecutionStore store;
+    private final ExecutionMetadata metadata;
+    private final ExecutionEventPublisher publisher;
 
-    private final SmartContractExecutionService smartContractExecutionService;
+    public PrepareExecution(ExecutionStore store, ExecutionMetadata metadata, ExecutionEventPublisher publisher) {
+        this.store = store;
+        this.metadata = metadata;
+        this.publisher = publisher;
+    }
 
-    private final SmartContractExecutionMapper smartContractExecutionMapper;
-
-    private final AmqpTemplate amqpTemplate;
-
-    @RabbitListener(id = "preparation", queues = {QueueNames.INBOUND_QUEUE},
-            containerFactory = "preparationListenerContainerFactory")
     public void process(SmartContractQueueInboundEventDto event) {
         OffsetDateTime consumedAt = OffsetDateTime.now(ZoneOffset.UTC);
 
-        SmartContractExecution smartContractExecution = smartContractExecutionService.create(SmartContractExecutionDto.builder().id(event.getId())
+        SmartContractExecution smartContractExecution = store.create(SmartContractExecutionDto.builder().id(event.getId())
                 .status(SmartContractExecutionStatus.PENDING)
                 .metadata(event.getMetadata())
                 .timestamps(event.getTimestamps()).build());
@@ -63,11 +51,11 @@ public class SmartContractQueueInboundService {
         smartContractExecution.setStatus(SmartContractExecutionStatus.PROCESSING);
 
         try {
-            smartContractExecutionService.update(smartContractExecution);
+            store.update(smartContractExecution);
 
-            Blockchain blockchain = blockchainService.findById(event.getBlockchainId());
+            Blockchain blockchain = metadata.findBlockchain(event.getBlockchainId());
 
-            SmartContract smartContract  = smartContractService.findById(event.getSmartContractId());
+            SmartContract smartContract  = metadata.findSmartContract(event.getSmartContractId());
 
             if (blockchain.getPlatform() != smartContract.getBlockchainPlatform()) {
                 throw new InvalidBlockchainPlatformException();
@@ -104,28 +92,20 @@ public class SmartContractQueueInboundService {
             timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED, consumedAt.toString());
             timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
             smartContractExecution.setTimestamps(timestamps);
-            smartContractExecutionService.update(smartContractExecution);
+            store.update(smartContractExecution);
 
-            amqpTemplate.convertAndSend(
-                    QueueNames.MAIN_EXCHANGE,
-                    QueueNames.EXECUTION_ROUTING_KEY,
-                    payload
-            );
+            publisher.publishExecution(payload);
         } catch (Exception exception) {
             timestamps.put(SmartContractExecutionEvent.INBOUND_QUEUE_PROCESSED, consumedAt.toString());
             timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PUBLISHED, OffsetDateTime.now(ZoneOffset.UTC).toString());
             smartContractExecution.setTimestamps(timestamps);
             smartContractExecution.setResult(exception.getMessage());
             smartContractExecution.setStatus(SmartContractExecutionStatus.FAILED);
-            smartContractExecutionService.update(smartContractExecution);
+            store.update(smartContractExecution);
 
-            amqpTemplate.convertAndSend(
-                    QueueNames.MAIN_EXCHANGE,
-                    QueueNames.OUTBOUND_ROUTING_KEY,
-                    smartContractExecutionMapper.toDto(smartContractExecution)
-            );
+            publisher.publishOutcome(smartContractExecution);
 
-            throw new AmqpRejectAndDontRequeueException(exception);
+            throw new PreparationRejectedException(exception);
         }
     }
 }
