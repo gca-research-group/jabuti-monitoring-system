@@ -1,6 +1,7 @@
 package br.edu.unijui.gca.api;
 
 import br.edu.unijui.gca.api.dtos.HyperledgerFabricConfigDto;
+import br.edu.unijui.gca.api.dtos.PostExecutionActionDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseArgumentDto;
 import br.edu.unijui.gca.api.dtos.SmartContractClauseDto;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
@@ -10,12 +11,16 @@ import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.BlockchainPlatform;
+import br.edu.unijui.gca.api.enums.PostExecutionActionType;
+import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
 import br.edu.unijui.gca.api.execution.adapters.rabbitmq.ContractExecutionListener;
 import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.filters.AuthFilter;
 import br.edu.unijui.gca.api.interfaces.IBlockchainConnection;
+import br.edu.unijui.gca.api.postexecution.adapters.rabbitmq.PostExecutionListener;
+import br.edu.unijui.gca.api.postexecution.application.ports.WebhookDelivery;
 import br.edu.unijui.gca.api.preparation.adapters.rabbitmq.ExecutionPreparationListener;
 import br.edu.unijui.gca.api.repositories.*;
 import br.edu.unijui.gca.api.services.JwtService;
@@ -204,6 +209,47 @@ class ApiApplicationTests {
                 assertThat(config.getValue().getMspId()).isEqualTo("Org1MSP");
                 assertThat(config.getValue().getChannelName()).isEqualTo("mychannel");
             }
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void postExecutionAdaptersPreserveCompletionAndDeliveryFailure(boolean deliveryFails) {
+        var delivery = mock(WebhookDelivery.class);
+        runner.withPropertyValues("spring.profiles.active=post-execution")
+                .withBean("testWebhookDelivery", WebhookDelivery.class, () -> delivery, definition -> definition.setPrimary(true))
+                .run(context -> {
+            assertThat(context).hasNotFailed();
+            assertThat(context.getBean(WebhookDelivery.class)).isSameAs(delivery);
+            var payload = SmartContractPayloadDto.builder().smartContractId(UUID.randomUUID()).clauseName("recordReading").build();
+            var execution = new SmartContractExecution();
+            execution.setId(UUID.randomUUID());
+            execution.setPayload(payload);
+            execution.setStatus(SmartContractExecutionStatus.PROCESSED);
+            execution.setTimestamps(new HashMap<>());
+            var contract = new SmartContract();
+            contract.setClauses(List.of(new SmartContractClauseDto("recordReading", List.of(), List.of(
+                    PostExecutionActionDto.builder().type(PostExecutionActionType.WEBHOOK).url("https://example.test/webhook").build()))));
+            var executions = context.getBean(SmartContractExecutionRepository.class);
+            when(executions.findById(execution.getId())).thenReturn(Optional.of(execution));
+            when(executions.save(any(SmartContractExecution.class))).thenAnswer(call -> call.getArgument(0));
+            when(context.getBean(SmartContractRepository.class).findById(payload.getSmartContractId())).thenReturn(Optional.of(contract));
+            var event = SmartContractExecutionDto.builder().id(execution.getId()).payload(payload).build();
+            var listener = context.getBean(PostExecutionListener.class);
+
+            if (deliveryFails) {
+                var failure = new IllegalStateException("delivery failed");
+                doThrow(failure).when(delivery).deliver("https://example.test/webhook");
+                assertThatThrownBy(() -> listener.process(event)).isSameAs(failure);
+                verify(executions, never()).save(any(SmartContractExecution.class));
+                assertThat(execution.getTimestamps()).doesNotContainKey(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSED);
+            } else {
+                listener.process(event);
+                verify(executions).save(execution);
+                assertThat(execution.getTimestamps()).containsKey(SmartContractExecutionEvent.OUTBOUND_QUEUE_PROCESSED);
+            }
+            verify(delivery).deliver("https://example.test/webhook");
+            assertThat(execution.getStatus()).isEqualTo(SmartContractExecutionStatus.PROCESSED);
         });
     }
 

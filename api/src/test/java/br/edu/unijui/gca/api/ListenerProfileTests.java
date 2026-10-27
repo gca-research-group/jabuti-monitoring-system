@@ -7,6 +7,8 @@ import br.edu.unijui.gca.api.execution.ExecutionConfiguration;
 import br.edu.unijui.gca.api.execution.adapters.rabbitmq.ContractExecutionListener;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.pipeline.PipelineConfiguration;
+import br.edu.unijui.gca.api.postexecution.PostExecutionConfiguration;
+import br.edu.unijui.gca.api.postexecution.adapters.rabbitmq.PostExecutionListener;
 import br.edu.unijui.gca.api.preparation.PreparationConfiguration;
 import br.edu.unijui.gca.api.preparation.adapters.rabbitmq.ExecutionPreparationListener;
 import br.edu.unijui.gca.api.services.*;
@@ -104,7 +106,7 @@ class ListenerProfileTests {
 
     @EnableRabbit
     @Import({RabbitMQConfig.class, PipelineConfiguration.class, PreparationConfiguration.class, ExecutionPreparationListener.class,
-            ExecutionConfiguration.class, ContractExecutionListener.class, SmartContractQueueOutboundService.class})
+            ExecutionConfiguration.class, ContractExecutionListener.class, PostExecutionConfiguration.class, PostExecutionListener.class})
     static class Listeners {
     }
 }

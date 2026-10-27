@@ -4,15 +4,17 @@
 
 **Blocked by:** 03: Decouple execution preparation from infrastructure.
 
-**Status:** ready-for-agent
+**Status:** done
 
 Scope: Follow the specification for profile-selected components and ADR 0001. Keep one Maven module and one executable JAR. Preserve business behaviour, database schema, queue topology, messages, and retained HTTP contracts. Add only ports needed for actual external interactions; no new domain model, outbox, retry redesign, or speculative framework.
 
 Automated validation must require no Testcontainers, Docker, embedded infrastructure, PostgreSQL, RabbitMQ, blockchain node, webhook server, or production credentials. Use focused contexts or application-level checks with mocked dependencies where meaningful; do not claim real infrastructure behaviour has been verified.
 
-- [ ] Keep the outbound RabbitMQ listener as an inbound adapter delegating to post-execution application logic.
-- [ ] Reuse execution-persistence and metadata-access ports established by ticket 03 for loading executions and configured contract actions and storing completion timestamps.
-- [ ] Move HTTP request/client handling into a focused webhook adapter behind a delivery port.
-- [ ] Preserve action selection, destination URLs, HTTP request contents including the existing webhook payload, timestamps, errors, and observable delivery behaviour; do not redesign retries or asynchronous execution incidentally.
-- [ ] Keep the role independently selectable and combinable without exposing HTTP listener-control endpoints.
-- [ ] Use application-level checks with mocked persistence and webhook delivery to verify configured actions, no-action cases, and existing error propagation without network requests.
+- [x] Keep the outbound RabbitMQ listener as an inbound adapter delegating to post-execution application logic.
+- [x] Reuse execution-persistence and metadata-access ports established by ticket 03 for loading executions and configured contract actions and storing completion timestamps.
+- [x] Move HTTP request/client handling into a focused webhook adapter behind a delivery port.
+- [x] Preserve action selection, destination URLs, HTTP request contents including the existing webhook payload, timestamps, errors, and observable delivery behaviour; do not redesign retries or asynchronous execution incidentally.
+- [x] Keep the role independently selectable and combinable without exposing HTTP listener-control endpoints.
+- [x] Use application-level checks with mocked persistence and webhook delivery to verify configured actions, no-action cases, and existing error propagation without network requests.
+
+Validation: All 72 infrastructure-free checks passed and Maven packaged the single executable artifact. Application checks preserve action selection/order, no-action handling, UTC timestamps, completion ordering, and raw error propagation. HTTP checks use a mocked client to verify the exact existing payload, headers, per-action closure, ignored response status, and exception wrapping without network requests. Listener and persistence wiring checks use mocked external boundaries. Standards and ticket-scope specification reviews found no actionable issues. No live database, broker, blockchain, or webhook services were exercised.
