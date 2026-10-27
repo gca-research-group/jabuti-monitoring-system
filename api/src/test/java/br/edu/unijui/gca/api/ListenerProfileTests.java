@@ -79,9 +79,10 @@ class ListenerProfileTests {
         });
     }
 
-    @Test
-    void combinedWorkersUseIndependentEnvironmentSettings() {
-        runner.withPropertyValues("spring.profiles.active=intake,preparation,execution,post-execution,metadata-management",
+    @ParameterizedTest
+    @ValueSource(strings = {"preparation,execution,post-execution", "intake,preparation,execution,post-execution,metadata-management"})
+    void combinedWorkersUseIndependentEnvironmentSettings(String profiles) {
+        runner.withPropertyValues("spring.profiles.active=" + profiles,
                 "PREPARATION_CONCURRENCY=2", "PREPARATION_MAX_CONCURRENCY=3", "PREPARATION_PREFETCH=4",
                 "EXECUTION_CONCURRENCY=5", "EXECUTION_MAX_CONCURRENCY=6", "EXECUTION_PREFETCH=7",
                 "POST_EXECUTION_CONCURRENCY=8", "POST_EXECUTION_MAX_CONCURRENCY=9", "POST_EXECUTION_PREFETCH=10")

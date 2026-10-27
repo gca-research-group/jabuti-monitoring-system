@@ -20,6 +20,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
@@ -36,6 +38,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.List;
 import java.util.function.Function;
@@ -75,11 +79,26 @@ class WebApplicationProfileTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"intake", "metadata-management", "intake,metadata-management",
+            "intake,preparation", "execution,metadata-management",
             "metadata-management,post-execution,execution,preparation,intake"})
     void webAndCombinedProfilesWireWithTheirSecurityDependencies(String profiles) {
         runner.withPropertyValues("spring.profiles.active=" + profiles).run(context -> {
             assertThat(context).hasNotFailed().hasSingleBean(AuthFilter.class);
             assertThat(context.getEnvironment().getProperty("spring.main.web-application-type")).isEqualTo("servlet");
+            var selected = Set.of(profiles.split(","));
+            var mappings = context.getBean("requestMappingHandlerMapping", RequestMappingHandlerMapping.class)
+                    .getHandlerMethods();
+            var paths = mappings.keySet().stream().flatMap(mapping -> mapping.getPatternValues().stream())
+                    .collect(Collectors.toSet());
+            assertThat(paths.contains("/smart-contract-execution/execute")).isEqualTo(selected.contains("intake"));
+            assertThat(paths.contains("/auth/login")).isEqualTo(selected.contains("metadata-management"));
+            assertThat(paths).doesNotContain("/rabbitmq/start", "/rabbitmq/stop", "/rabbitmq/consumers/{quantity}");
+            var registry = context.getBean(RabbitListenerEndpointRegistry.class);
+            var expectedWorkers = selected.stream().filter(role -> Set.of("preparation", "execution", "post-execution").contains(role))
+                    .collect(Collectors.toSet());
+            assertThat(registry.getListenerContainerIds()).containsExactlyInAnyOrderElementsOf(expectedWorkers);
+            assertThat(registry.getListenerContainers()).allSatisfy(container -> assertThat(container.isRunning()).isFalse());
+            verify(context.getBean(ConnectionFactory.class), never()).createConnection();
         });
     }
 
