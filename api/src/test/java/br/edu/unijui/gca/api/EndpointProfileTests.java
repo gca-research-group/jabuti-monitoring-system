@@ -3,13 +3,18 @@ package br.edu.unijui.gca.api;
 import br.edu.unijui.gca.api.intake.adapters.http.EventIntakeResource;
 import br.edu.unijui.gca.api.intake.application.AcceptExecution;
 import br.edu.unijui.gca.api.mappers.*;
-import br.edu.unijui.gca.api.resources.AuthResource;
-import br.edu.unijui.gca.api.services.*;
+import br.edu.unijui.gca.api.identity.adapters.http.AuthResource;
+import br.edu.unijui.gca.api.identity.application.ports.TokenOperations;
+import br.edu.unijui.gca.api.metadata.adapters.http.BlockchainResource;
+import br.edu.unijui.gca.api.identity.application.*;
+import br.edu.unijui.gca.api.metadata.application.*;
+import br.edu.unijui.gca.api.metadata.application.ports.QueueMaintenance;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -26,6 +31,7 @@ class EndpointProfileTests {
             .withUserConfiguration(Endpoints.class)
             .withBean(AcceptExecution.class, () -> new AcceptExecution(event -> { }))
             .withBean(AuthService.class, () -> mock(AuthService.class))
+            .withBean(TokenOperations.class, () -> mock(TokenOperations.class))
             .withBean(ApiKeyService.class, () -> mock(ApiKeyService.class))
             .withBean(UserService.class, () -> mock(UserService.class))
             .withBean(UserMapper.class, () -> mock(UserMapper.class))
@@ -35,7 +41,7 @@ class EndpointProfileTests {
             .withBean(SmartContractMapper.class, () -> mock(SmartContractMapper.class))
             .withBean(SmartContractExecutionService.class, () -> mock(SmartContractExecutionService.class))
             .withBean(SmartContractExecutionMapper.class, () -> mock(SmartContractExecutionMapper.class))
-            .withBean(RabbitMQService.class, () -> mock(RabbitMQService.class));
+            .withBean(QueueMaintenance.class, () -> mock(QueueMaintenance.class));
 
     @Test
     void intakeExposesSubmissionWithoutManagementEndpoints() {
@@ -86,7 +92,8 @@ class EndpointProfileTests {
     }
 
     @EnableWebMvc
-    @ComponentScan(basePackageClasses = {AuthResource.class, EventIntakeResource.class})
+    @ComponentScan(basePackageClasses = {AuthResource.class, BlockchainResource.class, EventIntakeResource.class},
+            useDefaultFilters = false, includeFilters = @ComponentScan.Filter(RestController.class))
     static class Endpoints {
     }
 }

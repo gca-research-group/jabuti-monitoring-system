@@ -3,17 +3,17 @@ package br.edu.unijui.gca.api.pipeline.adapters.persistence;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
-import br.edu.unijui.gca.api.services.BlockchainService;
-import br.edu.unijui.gca.api.services.SmartContractService;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 
 import java.util.UUID;
 
 public class MetadataPersistenceAdapter implements ExecutionMetadata {
 
-    private final BlockchainService blockchains;
-    private final SmartContractService contracts;
+    private final BlockchainStore blockchains;
+    private final SmartContractStore contracts;
 
-    public MetadataPersistenceAdapter(BlockchainService blockchains, SmartContractService contracts) {
+    public MetadataPersistenceAdapter(BlockchainStore blockchains, SmartContractStore contracts) {
         this.blockchains = blockchains;
         this.contracts = contracts;
     }

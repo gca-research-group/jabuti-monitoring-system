@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.execution.adapters.blockchain;
 import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
-import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
+import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
 import tools.jackson.databind.ObjectMapper;
 

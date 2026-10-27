@@ -2,7 +2,7 @@ package br.edu.unijui.gca.api;
 
 import br.edu.unijui.gca.api.config.QueueNames;
 import br.edu.unijui.gca.api.config.RabbitMQConfig;
-import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
+import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.execution.ExecutionConfiguration;
 import br.edu.unijui.gca.api.execution.adapters.rabbitmq.ContractExecutionListener;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
@@ -11,7 +11,9 @@ import br.edu.unijui.gca.api.postexecution.PostExecutionConfiguration;
 import br.edu.unijui.gca.api.postexecution.adapters.rabbitmq.PostExecutionListener;
 import br.edu.unijui.gca.api.preparation.PreparationConfiguration;
 import br.edu.unijui.gca.api.preparation.adapters.rabbitmq.ExecutionPreparationListener;
-import br.edu.unijui.gca.api.services.*;
+import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -45,10 +47,10 @@ class ListenerProfileTests {
             .withBean(AmqpTemplate.class, () -> mock(AmqpTemplate.class))
             .withBean(ObjectMapper.class, ObjectMapper::new)
             .withBean(BlockchainConnectionFactory.class, () -> mock(BlockchainConnectionFactory.class))
-            .withBean(SmartContractExecutionService.class, () -> mock(SmartContractExecutionService.class))
+            .withBean(ExecutionStore.class, () -> mock(ExecutionStore.class))
             .withBean(SmartContractExecutionMapper.class, () -> mock(SmartContractExecutionMapper.class))
-            .withBean(SmartContractService.class, () -> mock(SmartContractService.class))
-            .withBean(BlockchainService.class, () -> mock(BlockchainService.class))
+            .withBean(SmartContractStore.class, () -> mock(SmartContractStore.class))
+            .withBean(BlockchainStore.class, () -> mock(BlockchainStore.class))
             // Inspect real listener containers without starting them or contacting a broker.
             .withBean("lifecycleProcessor", LifecycleProcessor.class, () -> mock(LifecycleProcessor.class));
 

@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.execution;
 import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainContractInvoker;
 import br.edu.unijui.gca.api.execution.application.ExecuteContract;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
-import br.edu.unijui.gca.api.factories.BlockchainConnectionFactory;
+import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
