@@ -18,6 +18,29 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import br.edu.unijui.gca.api.dtos.blockchain.BlockchainFilterDto;
+import br.edu.unijui.gca.api.entities.Blockchain;
+import br.edu.unijui.gca.api.interfaces.CrudMapper;
+import br.edu.unijui.gca.api.metadata.adapters.http.CrudResource;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.shared.application.CrudService;
+import br.edu.unijui.gca.api.shared.application.UpdateField;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import org.mapstruct.factory.Mappers;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.SliceImpl;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.RequestMapping;
+import tools.jackson.databind.ObjectMapper;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -26,6 +49,158 @@ import static org.mockito.Mockito.mock;
 
 class EndpointProfileTests {
 
+    @Test
+    void blockchainCrudPreservesItsHttpContractThroughTheExpandedBoundaries() {
+        var id = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        var store = mock(BlockchainStore.class);
+        var mapper = Mappers.getMapper(BlockchainMapper.class);
+        var saved = new AtomicReference<Blockchain>();
+        when(store.save(any())).thenAnswer(call -> {
+            Blockchain entity = call.getArgument(0);
+            entity.setId(id);
+            saved.set(entity);
+            return entity;
+        });
+        when(store.findById(id)).thenAnswer(call -> saved.get());
+        when(store.findAll(any(), any()))
+                .thenAnswer(call -> new SliceImpl<>(List.of(saved.get())));
+        new WebApplicationContextRunner()
+                .withPropertyValues("spring.profiles.active=metadata-management", "app.backend-url=http://localhost:8080")
+                .withUserConfiguration(BlockchainEndpoint.class)
+                .withBean(BlockchainService.class, () -> new BlockchainService(store, mapper))
+                .withBean(BlockchainMapper.class, () -> mapper)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var mvc = MockMvcBuilders
+                            .webAppContextSetup(context.getSourceApplicationContext()).build();
+                    var responseMapper = new ObjectMapper();
+                    var created = mvc.perform(
+                                    post("/blockchain").contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                            {"name":"Ledger","platform":"DUMMY","status":true,
+                                             "remarks":"original","parameters":{"network":"local"}}
+                                            """))
+                            .andExpect(status().isOk())
+                            .andReturn().getResponse().getContentAsString();
+                    var json = responseMapper.readTree(created);
+                    assertThat(json.get("id").asText()).isEqualTo(id.toString());
+                    assertThat(json.get("name").asText()).isEqualTo("Ledger");
+                    assertThat(json.get("parameters").get("network").asText()).isEqualTo("local");
+                    var updated = mvc.perform(
+                                    put("/blockchain/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                                    .content("""
+                                            {"id":"00000000-0000-0000-0000-000000000002",
+                                             "name":"Renamed","platform":"DUMMY","remarks":null}
+                                            """))
+                            .andExpect(status().isOk())
+                            .andReturn().getResponse().getContentAsString();
+                    json = responseMapper.readTree(updated);
+                    assertThat(json.get("id").asText()).isEqualTo(id.toString());
+                    assertThat(json.get("name").asText()).isEqualTo("Renamed");
+                    assertThat(json.get("remarks").isNull()).isTrue();
+                    assertThat(json.get("parameters").isNull()).isTrue();
+                    assertThat(json.get("status").asBoolean()).isFalse();
+                    mvc.perform(get("/blockchain/{id}", id))
+                            .andExpect(status().isOk());
+                    var listed = mvc.perform(get("/blockchain"))
+                            .andExpect(status().isOk())
+                            .andReturn().getResponse().getContentAsString();
+                    assertThat(responseMapper.readTree(listed).get("data").get(0).get("name").asText()).isEqualTo("Renamed");
+                    mvc.perform(delete("/blockchain/{id}", id))
+                            .andExpect(status().isOk());
+                    verify(store).remove(id);
+                    mvc.perform(post("/blockchain")
+                                    .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                            .andExpect(status().isBadRequest());
+                });
+    }
+
+    @EnableWebMvc
+    @Import(BlockchainResource.class)
+    static class BlockchainEndpoint {
+    }
+
+    @Test
+    void independentContractsPreserveAbsentFieldsAndAllowExplicitNullThroughHttp() {
+        var entity = new Blockchain();
+        var store = mock(BlockchainStore.class);
+        when(store.findById(any())).thenReturn(entity);
+        when(store.save(any())).thenAnswer(call -> call.getArgument(0));
+        var mapper = new CrudMapper<Blockchain, CreateName, UpdateRemarks, NameResponse>() {
+            public Blockchain toEntity(CreateName request) {
+                entity.setName(request.name());
+                entity.setRemarks("initial");
+                return entity;
+            }
+            public void updateEntity(UpdateRemarks request, Blockchain target) {
+                request.remarks.ifSupplied(target::setRemarks);
+            }
+            public NameResponse toDto(Blockchain target) {
+                return new NameResponse(target.getName(), target.getRemarks());
+            }
+        };
+        var service = new CrudService<Blockchain, UUID, BlockchainFilterDto, CreateName, UpdateRemarks, NameResponse>() {
+            protected BlockchainStore store() { return store; }
+            protected CrudMapper<Blockchain, CreateName, UpdateRemarks, NameResponse> mapper() { return mapper; }
+        };
+        new WebApplicationContextRunner().withPropertyValues("spring.profiles.active=crud-contract-test")
+                .withUserConfiguration(IndependentEndpoint.class)
+                .withBean(IndependentResource.class, () -> new IndependentResource(service, mapper))
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    var mvc = MockMvcBuilders.webAppContextSetup(context.getSourceApplicationContext()).build();
+                    var json = new ObjectMapper();
+                    var created = mvc.perform(post("/independent").contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"name\":\"Ledger\"}"))
+                            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                    assertThat(json.readTree(created).get("name").asText()).isEqualTo("Ledger");
+                    var url = "/independent/00000000-0000-0000-0000-000000000001";
+                    var omitted = mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                    assertThat(json.readTree(omitted).get("remarks").asText()).isEqualTo("initial");
+                    var cleared = mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"remarks\":null}"))
+                            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                    assertThat(json.readTree(cleared).get("remarks").isNull()).isTrue();
+                    var replaced = mvc.perform(put(url).contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"remarks\":\"replacement\"}"))
+                            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                    assertThat(json.readTree(replaced).get("remarks").asText()).isEqualTo("replacement");
+                    assertThat(json.readTree(replaced).get("name").asText()).isEqualTo("Ledger");
+                });
+    }
+
+    public record CreateName(String name) { }
+    public record NameResponse(String name, String remarks) { }
+
+    public static class UpdateRemarks {
+        private UpdateField<String> remarks = UpdateField.absent();
+
+        @JsonSetter("remarks")
+        public void setRemarks(String value) {
+            remarks = UpdateField.supplied(value);
+        }
+    }
+
+    @RestController
+    @org.springframework.context.annotation.Profile("crud-contract-test")
+    @RequestMapping("/independent")
+    static class IndependentResource extends CrudResource<Blockchain, UUID, BlockchainFilterDto, CreateName, UpdateRemarks, NameResponse> {
+        private final CrudService<Blockchain, UUID, BlockchainFilterDto, CreateName, UpdateRemarks, NameResponse> service;
+        private final CrudMapper<Blockchain, CreateName, UpdateRemarks, NameResponse> mapper;
+
+        IndependentResource(CrudService<Blockchain, UUID, BlockchainFilterDto, CreateName, UpdateRemarks, NameResponse> service,
+                            CrudMapper<Blockchain, CreateName, UpdateRemarks, NameResponse> mapper) {
+            this.service = service;
+            this.mapper = mapper;
+        }
+
+        protected CrudService<Blockchain, UUID, BlockchainFilterDto, CreateName, UpdateRemarks, NameResponse> service() { return service; }
+        protected CrudMapper<Blockchain, CreateName, UpdateRemarks, NameResponse> mapper() { return mapper; }
+    }
+
+    @EnableWebMvc
+    static class IndependentEndpoint { }
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
             .withPropertyValues("app.backend-url=http://localhost:8080")
             .withUserConfiguration(Endpoints.class)
