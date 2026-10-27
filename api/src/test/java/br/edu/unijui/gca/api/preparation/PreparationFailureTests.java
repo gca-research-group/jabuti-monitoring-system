@@ -13,7 +13,8 @@ import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseArgumentException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseException;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.preparation.application.PreparationRejectedException;
 import br.edu.unijui.gca.api.preparation.application.PrepareExecution;
@@ -34,9 +35,10 @@ import static org.mockito.Mockito.*;
 class PreparationFailureTests {
 
     private final ExecutionStore store = mock(ExecutionStore.class);
-    private final ExecutionMetadata metadata = mock(ExecutionMetadata.class);
+    private final BlockchainStore blockchains = mock(BlockchainStore.class);
+    private final SmartContractStore contracts = mock(SmartContractStore.class);
     private final ExecutionEventPublisher publisher = mock(ExecutionEventPublisher.class);
-    private final PrepareExecution preparation = new PrepareExecution(store, metadata, publisher);
+    private final PrepareExecution preparation = new PrepareExecution(store, blockchains, contracts, publisher);
     private final SmartContractQueueInboundEventDto event = new SmartContractQueueInboundEventDto();
     private final SmartContractExecution execution = new SmartContractExecution();
     private final SmartContract contract = new SmartContract();
@@ -59,8 +61,8 @@ class PreparationFailureTests {
         contract.setClauses(List.of(new SmartContractClauseDto("recordReading",
                 List.of(new SmartContractClauseArgumentDto("reading", null)), List.of())));
         when(store.create(any(SmartContractExecutionDto.class))).thenReturn(execution);
-        when(metadata.findBlockchain(event.getBlockchainId())).thenReturn(blockchain);
-        when(metadata.findSmartContract(event.getSmartContractId())).thenReturn(contract);
+        when(blockchains.findById(event.getBlockchainId())).thenReturn(blockchain);
+        when(contracts.findById(event.getSmartContractId())).thenReturn(contract);
     }
 
     @ParameterizedTest
@@ -111,7 +113,7 @@ class PreparationFailureTests {
         when(store.create(any(SmartContractExecutionDto.class))).thenThrow(failure);
 
         assertThatThrownBy(() -> preparation.process(event)).isSameAs(failure);
-        verifyNoInteractions(metadata, publisher);
+        verifyNoInteractions(blockchains, contracts, publisher);
     }
 
     @Test

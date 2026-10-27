@@ -7,7 +7,7 @@ import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 
 import java.time.OffsetDateTime;
@@ -17,14 +17,14 @@ import java.util.Map;
 public class ExecuteContract {
 
     private final ExecutionStore store;
-    private final ExecutionMetadata metadata;
+    private final BlockchainStore blockchains;
     private final ContractInvoker invoker;
     private final ExecutionEventPublisher publisher;
 
-    public ExecuteContract(ExecutionStore store, ExecutionMetadata metadata,
+    public ExecuteContract(ExecutionStore store, BlockchainStore blockchains,
                            ContractInvoker invoker, ExecutionEventPublisher publisher) {
         this.store = store;
-        this.metadata = metadata;
+        this.blockchains = blockchains;
         this.invoker = invoker;
         this.publisher = publisher;
     }
@@ -39,7 +39,7 @@ public class ExecuteContract {
             timestamps.put(SmartContractExecutionEvent.EXECUTION_QUEUE_PROCESSING, OffsetDateTime.now(ZoneOffset.UTC).toString());
             store.update(smartContractExecution);
 
-            Blockchain blockchain = metadata.findBlockchain(payload.getBlockchainId());
+            Blockchain blockchain = blockchains.findById(payload.getBlockchainId());
 
             String result = invoker.invoke(blockchain, payload);
 

@@ -1,6 +1,6 @@
 package br.edu.unijui.gca.api.postexecution;
 
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.postexecution.adapters.http.HttpWebhookDelivery;
 import br.edu.unijui.gca.api.postexecution.application.CompleteExecution;
@@ -21,7 +21,7 @@ public class PostExecutionConfiguration {
     }
 
     @Bean
-    public CompleteExecution completeExecution(ExecutionStore store, ExecutionMetadata metadata, WebhookDelivery webhooks) {
-        return new CompleteExecution(store, metadata, webhooks);
+    public CompleteExecution completeExecution(ExecutionStore store, SmartContractStore contracts, WebhookDelivery webhooks) {
+        return new CompleteExecution(store, contracts, webhooks);
     }
 }

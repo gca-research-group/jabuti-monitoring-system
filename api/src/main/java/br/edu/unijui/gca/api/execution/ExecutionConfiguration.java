@@ -5,7 +5,8 @@ import br.edu.unijui.gca.api.execution.application.ExecuteContract;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
 import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainConnectionFactory;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,13 +19,13 @@ public class ExecutionConfiguration {
 
     @Bean
     public ContractInvoker contractInvoker(BlockchainConnectionFactory factory, ObjectMapper objectMapper,
-                                           ExecutionMetadata metadata) {
-        return new BlockchainContractInvoker(factory, objectMapper, metadata);
+                                           SmartContractStore contracts) {
+        return new BlockchainContractInvoker(factory, objectMapper, contracts);
     }
 
     @Bean
-    public ExecuteContract executeContract(ExecutionStore store, ExecutionMetadata metadata,
+    public ExecuteContract executeContract(ExecutionStore store, BlockchainStore blockchains,
                                            ContractInvoker invoker, ExecutionEventPublisher publisher) {
-        return new ExecuteContract(store, metadata, invoker, publisher);
+        return new ExecuteContract(store, blockchains, invoker, publisher);
     }
 }

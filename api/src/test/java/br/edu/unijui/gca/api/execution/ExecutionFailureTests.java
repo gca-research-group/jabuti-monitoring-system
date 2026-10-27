@@ -8,7 +8,7 @@ import br.edu.unijui.gca.api.execution.application.ExecuteContract;
 import br.edu.unijui.gca.api.execution.application.ExecutionRejectedException;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,10 +24,10 @@ import static org.mockito.Mockito.*;
 class ExecutionFailureTests {
 
     private final ExecutionStore store = mock(ExecutionStore.class);
-    private final ExecutionMetadata metadata = mock(ExecutionMetadata.class);
+    private final BlockchainStore blockchains = mock(BlockchainStore.class);
     private final ContractInvoker invoker = mock(ContractInvoker.class);
     private final ExecutionEventPublisher publisher = mock(ExecutionEventPublisher.class);
-    private final ExecuteContract application = new ExecuteContract(store, metadata, invoker, publisher);
+    private final ExecuteContract application = new ExecuteContract(store, blockchains, invoker, publisher);
     private final SmartContractPayloadDto payload = SmartContractPayloadDto.builder().id(UUID.randomUUID())
             .blockchainId(UUID.randomUUID()).smartContractId(UUID.randomUUID()).build();
     private final SmartContractExecution execution = new SmartContractExecution();
@@ -39,7 +39,7 @@ class ExecutionFailureTests {
         execution.setStatus(SmartContractExecutionStatus.PROCESSING);
         execution.setTimestamps(new HashMap<>());
         when(store.findById(payload.getId())).thenReturn(execution);
-        when(metadata.findBlockchain(payload.getBlockchainId())).thenReturn(blockchain);
+        when(blockchains.findById(payload.getBlockchainId())).thenReturn(blockchain);
         when(invoker.invoke(blockchain, payload)).thenReturn("receipt-42");
     }
 
@@ -82,7 +82,7 @@ class ExecutionFailureTests {
         when(store.findById(payload.getId())).thenThrow(failure);
 
         assertThatThrownBy(() -> application.process(payload)).isSameAs(failure);
-        verifyNoInteractions(metadata, invoker, publisher);
+        verifyNoInteractions(blockchains, invoker, publisher);
     }
 
     @Test
@@ -92,7 +92,7 @@ class ExecutionFailureTests {
 
         assertThatThrownBy(() -> application.process(payload)).isInstanceOf(ExecutionRejectedException.class).hasCause(failure);
         assertThat(execution.getStatus()).isEqualTo(SmartContractExecutionStatus.FAILED);
-        verifyNoInteractions(metadata, invoker);
+        verifyNoInteractions(blockchains, invoker);
         verify(publisher).publishOutcome(execution);
     }
 

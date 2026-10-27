@@ -14,7 +14,8 @@ import br.edu.unijui.gca.api.exceptions.InvalidBlockchainPlatformException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseArgumentException;
 import br.edu.unijui.gca.api.exceptions.InvalidSmartContractClauseException;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 
 import java.time.OffsetDateTime;
@@ -26,12 +27,14 @@ import java.util.stream.Collectors;
 public class PrepareExecution {
 
     private final ExecutionStore store;
-    private final ExecutionMetadata metadata;
+    private final BlockchainStore blockchains;
+    private final SmartContractStore contracts;
     private final ExecutionEventPublisher publisher;
 
-    public PrepareExecution(ExecutionStore store, ExecutionMetadata metadata, ExecutionEventPublisher publisher) {
+    public PrepareExecution(ExecutionStore store, BlockchainStore blockchains, SmartContractStore contracts, ExecutionEventPublisher publisher) {
         this.store = store;
-        this.metadata = metadata;
+        this.blockchains = blockchains;
+        this.contracts = contracts;
         this.publisher = publisher;
     }
 
@@ -53,9 +56,9 @@ public class PrepareExecution {
         try {
             store.update(smartContractExecution);
 
-            Blockchain blockchain = metadata.findBlockchain(event.getBlockchainId());
+            Blockchain blockchain = blockchains.findById(event.getBlockchainId());
 
-            SmartContract smartContract  = metadata.findSmartContract(event.getSmartContractId());
+            SmartContract smartContract  = contracts.findById(event.getSmartContractId());
 
             if (blockchain.getPlatform() != smartContract.getBlockchainPlatform()) {
                 throw new InvalidBlockchainPlatformException();

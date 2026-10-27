@@ -9,7 +9,7 @@ import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.PostExecutionActionType;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.postexecution.application.CompleteExecution;
 import br.edu.unijui.gca.api.postexecution.application.ports.WebhookDelivery;
@@ -29,9 +29,9 @@ import static org.mockito.Mockito.*;
 class PostExecutionFailureTests {
 
     private final ExecutionStore store = mock(ExecutionStore.class);
-    private final ExecutionMetadata metadata = mock(ExecutionMetadata.class);
+    private final SmartContractStore contracts = mock(SmartContractStore.class);
     private final WebhookDelivery delivery = mock(WebhookDelivery.class);
-    private final CompleteExecution application = new CompleteExecution(store, metadata, delivery);
+    private final CompleteExecution application = new CompleteExecution(store, contracts, delivery);
     private final SmartContractExecution execution = new SmartContractExecution();
     private final SmartContract contract = new SmartContract();
     private SmartContractExecutionDto event;
@@ -48,7 +48,7 @@ class PostExecutionFailureTests {
                 PostExecutionActionDto.builder().type(PostExecutionActionType.WEBHOOK).url("https://example.test/first").build(),
                 PostExecutionActionDto.builder().type(PostExecutionActionType.WEBHOOK).url("https://example.test/second").build()))));
         when(store.findById(event.getId())).thenReturn(execution);
-        when(metadata.findSmartContract(payload.getSmartContractId())).thenReturn(contract);
+        when(contracts.findById(payload.getSmartContractId())).thenReturn(contract);
     }
 
     @ParameterizedTest
@@ -90,13 +90,13 @@ class PostExecutionFailureTests {
         when(store.findById(event.getId())).thenThrow(failure);
 
         assertThatThrownBy(() -> application.process(event)).isSameAs(failure);
-        verifyNoInteractions(metadata, delivery);
+        verifyNoInteractions(contracts, delivery);
     }
 
     @Test
     void metadataFailureEscapesWithoutDeliveryOrCompletion() {
         var failure = new IllegalStateException("contract unavailable");
-        when(metadata.findSmartContract(execution.getPayload().getSmartContractId())).thenThrow(failure);
+        when(contracts.findById(execution.getPayload().getSmartContractId())).thenThrow(failure);
 
         assertThatThrownBy(() -> application.process(event)).isSameAs(failure);
         verifyNoInteractions(delivery);

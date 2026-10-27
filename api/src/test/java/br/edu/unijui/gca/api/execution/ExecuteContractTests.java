@@ -9,7 +9,7 @@ import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.execution.application.ExecuteContract;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +29,7 @@ class ExecuteContractTests {
     @Test
     void successfulInvocationStoresResultAndPublishesTheExistingExecutionOutcome() {
         var store = mock(ExecutionStore.class);
-        var metadata = mock(ExecutionMetadata.class);
+        var blockchains = mock(BlockchainStore.class);
         var invoker = mock(ContractInvoker.class);
         var publisher = mock(ExecutionEventPublisher.class);
         var payload = SmartContractPayloadDto.builder().id(UUID.randomUUID())
@@ -45,12 +45,12 @@ class ExecuteContractTests {
         blockchain.setId(payload.getBlockchainId());
         var savedStates = new ArrayList<SmartContractExecutionStatus>();
         when(store.findById(payload.getId())).thenReturn(execution);
-        when(metadata.findBlockchain(payload.getBlockchainId())).thenReturn(blockchain);
+        when(blockchains.findById(payload.getBlockchainId())).thenReturn(blockchain);
         when(invoker.invoke(blockchain, payload)).thenReturn("receipt-42");
         doAnswer(call -> { savedStates.add(execution.getStatus()); return null; }).when(store).update(execution);
         OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC);
 
-        new ExecuteContract(store, metadata, invoker, publisher).process(payload);
+        new ExecuteContract(store, blockchains, invoker, publisher).process(payload);
 
         assertThat(savedStates).containsExactly(SmartContractExecutionStatus.PROCESSING, SmartContractExecutionStatus.PROCESSED);
         assertThat(execution.getResult()).isEqualTo("receipt-42");

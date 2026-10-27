@@ -6,7 +6,7 @@ import br.edu.unijui.gca.api.entities.SmartContract;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.PostExecutionActionType;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.postexecution.application.ports.WebhookDelivery;
 
@@ -18,12 +18,12 @@ import java.util.UUID;
 public class CompleteExecution {
 
     private final ExecutionStore store;
-    private final ExecutionMetadata metadata;
+    private final SmartContractStore contracts;
     private final WebhookDelivery webhooks;
 
-    public CompleteExecution(ExecutionStore store, ExecutionMetadata metadata, WebhookDelivery webhooks) {
+    public CompleteExecution(ExecutionStore store, SmartContractStore contracts, WebhookDelivery webhooks) {
         this.store = store;
-        this.metadata = metadata;
+        this.contracts = contracts;
         this.webhooks = webhooks;
     }
 
@@ -37,7 +37,7 @@ public class CompleteExecution {
 
         UUID smartContractId = smartContractExecution.getPayload().getSmartContractId();
 
-        SmartContract smartContract  = metadata.findSmartContract(smartContractId);
+        SmartContract smartContract  = contracts.findById(smartContractId);
 
         smartContract
             .getClauses()

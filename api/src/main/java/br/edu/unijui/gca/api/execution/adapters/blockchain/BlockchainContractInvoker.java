@@ -4,20 +4,20 @@ import br.edu.unijui.gca.api.dtos.SmartContractPayloadDto;
 import br.edu.unijui.gca.api.entities.Blockchain;
 import br.edu.unijui.gca.api.execution.application.ports.ContractInvoker;
 import br.edu.unijui.gca.api.execution.adapters.blockchain.BlockchainConnectionFactory;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import tools.jackson.databind.ObjectMapper;
 
 public class BlockchainContractInvoker implements ContractInvoker {
 
     private final BlockchainConnectionFactory factory;
     private final ObjectMapper objectMapper;
-    private final ExecutionMetadata metadata;
+    private final SmartContractStore contracts;
 
     public BlockchainContractInvoker(BlockchainConnectionFactory factory, ObjectMapper objectMapper,
-                                     ExecutionMetadata metadata) {
+                                     SmartContractStore contracts) {
         this.factory = factory;
         this.objectMapper = objectMapper;
-        this.metadata = metadata;
+        this.contracts = contracts;
     }
 
     @Override
@@ -25,7 +25,7 @@ public class BlockchainContractInvoker implements ContractInvoker {
         // Resolve configuration and client before contract lookup to preserve failure precedence.
         var parameters = objectMapper.convertValue(blockchain.getParameters(), factory.getConfigType(blockchain.getPlatform()));
         var connection = factory.getInstance(blockchain.getPlatform());
-        var contract = metadata.findSmartContract(payload.getSmartContractId());
+        var contract = contracts.findById(payload.getSmartContractId());
 
         return connection.invoke(payload.getBlockchainId(), parameters, contract.getName(),
                 payload.getClauseName(), payload.getClauseArguments());

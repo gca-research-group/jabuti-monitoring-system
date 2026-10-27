@@ -9,7 +9,7 @@ import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.enums.PostExecutionActionType;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.postexecution.application.CompleteExecution;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class CompleteExecutionTests {
     @Test
     void configuredWebhooksAreDeliveredInOrderBeforeCompletionIsStored() {
         var store = mock(ExecutionStore.class);
-        var metadata = mock(ExecutionMetadata.class);
+        var contracts = mock(SmartContractStore.class);
         UUID contractId = UUID.randomUUID();
         var execution = new SmartContractExecution();
         execution.setId(UUID.randomUUID());
@@ -48,12 +48,12 @@ class CompleteExecutionTests {
                 new SmartContractClauseDto("recordReading", List.of(), List.of(first, ignored, second)),
                 new SmartContractClauseDto("recordReading", List.of(), List.of(first))));
         when(store.findById(event.getId())).thenReturn(execution);
-        when(metadata.findSmartContract(contractId)).thenReturn(contract);
+        when(contracts.findById(contractId)).thenReturn(contract);
         var effects = new ArrayList<String>();
         doAnswer(call -> { effects.add("saved"); return null; }).when(store).update(execution);
         OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC);
 
-        new CompleteExecution(store, metadata, effects::add).process(event);
+        new CompleteExecution(store, contracts, effects::add).process(event);
 
         assertThat(effects).containsExactly("https://example.test/first", "https://example.test/second", "saved");
         assertThat(execution.getStatus()).isEqualTo(SmartContractExecutionStatus.PROCESSED);

@@ -9,7 +9,8 @@ import br.edu.unijui.gca.api.enums.BlockchainPlatform;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionEvent;
 import br.edu.unijui.gca.api.enums.SmartContractExecutionStatus;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionEventPublisher;
-import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionMetadata;
+import br.edu.unijui.gca.api.metadata.application.ports.BlockchainStore;
+import br.edu.unijui.gca.api.metadata.application.ports.SmartContractStore;
 import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionStore;
 import br.edu.unijui.gca.api.preparation.application.PrepareExecution;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ import static org.mockito.Mockito.*;
 class PrepareExecutionTests {
 
     private final ExecutionStore store = mock(ExecutionStore.class);
-    private final ExecutionMetadata metadata = mock(ExecutionMetadata.class);
+    private final BlockchainStore blockchains = mock(BlockchainStore.class);
+    private final SmartContractStore contracts = mock(SmartContractStore.class);
     private final ExecutionEventPublisher publisher = mock(ExecutionEventPublisher.class);
 
     @Test
@@ -58,11 +60,11 @@ class PrepareExecutionTests {
         var states = new ArrayList<SmartContractExecutionStatus>();
         when(store.create(any(SmartContractExecutionDto.class))).thenReturn(execution);
         doAnswer(call -> { states.add(execution.getStatus()); return null; }).when(store).update(execution);
-        when(metadata.findBlockchain(event.getBlockchainId())).thenReturn(blockchain);
-        when(metadata.findSmartContract(event.getSmartContractId())).thenReturn(contract);
+        when(blockchains.findById(event.getBlockchainId())).thenReturn(blockchain);
+        when(contracts.findById(event.getSmartContractId())).thenReturn(contract);
         OffsetDateTime before = OffsetDateTime.now(ZoneOffset.UTC);
 
-        new PrepareExecution(store, metadata, publisher).process(event);
+        new PrepareExecution(store, blockchains, contracts, publisher).process(event);
 
         var created = ArgumentCaptor.forClass(SmartContractExecutionDto.class);
         verify(store).create(created.capture());
