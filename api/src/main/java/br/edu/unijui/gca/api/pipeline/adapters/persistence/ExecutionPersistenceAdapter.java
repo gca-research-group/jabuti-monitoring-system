@@ -3,7 +3,7 @@ package br.edu.unijui.gca.api.pipeline.adapters.persistence;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionDto;
 import br.edu.unijui.gca.api.entities.SmartContractExecution;
 import br.edu.unijui.gca.api.dtos.smartcontractexecution.SmartContractExecutionFilterDto;
-import br.edu.unijui.gca.api.metadata.application.ports.ExecutionManagementStore;
+import br.edu.unijui.gca.api.pipeline.application.ports.ExecutionManagementStore;
 import br.edu.unijui.gca.api.mappers.SmartContractExecutionMapper;
 import br.edu.unijui.gca.api.repositories.SmartContractExecutionRepository;
 import br.edu.unijui.gca.api.specifications.SmartContractExecutionSpecification;
