@@ -1,5 +1,6 @@
 package br.edu.unijui.gca.api;
 
+import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
 import br.edu.unijui.gca.api.entities.ApiKey;
 import br.edu.unijui.gca.api.filters.AuthFilter;
 import br.edu.unijui.gca.api.repositories.*;
@@ -8,6 +9,7 @@ import jakarta.servlet.Filter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
@@ -15,8 +17,10 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -74,10 +78,20 @@ class WebApplicationProfileTests {
             apiKey.setKeyHash(HashUtils.sha256("secret"));
             when(context.getBean(ApiKeyRepository.class).findByKeyPrefix("prefix"))
                     .thenReturn(Optional.of(apiKey));
-            mvc.perform(post("/smart-contract-execution/execute").header("X-API-Key", "jms_prefix.secret")
+
+            mvc.perform(post("/smart-contract-execution/execute").header("X-API-Key", "jms_prefix.wrong-secret")
                             .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                    .andExpect(status().isOk());
-            verify(publisher).convertAndSend(eq("smart-contract.exchange"), eq("smart-contract.inbound.routing-key"), any(Object.class));
+                    .andExpect(status().isBadRequest());
+            verify(publisher, never()).convertAndSend(any(String.class), any(String.class), any(Object.class));
+
+            var response = mvc.perform(post("/smart-contract-execution/execute").header("X-API-Key", "jms_prefix.secret")
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk()).andReturn();
+            var message = ArgumentCaptor.forClass(SmartContractQueueInboundEventDto.class);
+            verify(publisher).convertAndSend(eq("smart-contract.exchange"), eq("smart-contract.inbound.routing-key"), message.capture());
+            UUID responseId = new ObjectMapper().readValue(response.getResponse().getContentAsString(), UUID.class);
+            assertThat(message.getValue().getId()).isEqualTo(responseId);
+            verifyNoInteractions(context.getBean(SmartContractExecutionRepository.class));
         });
     }
 }

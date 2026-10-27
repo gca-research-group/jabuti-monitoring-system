@@ -1,7 +1,7 @@
-package br.edu.unijui.gca.api.resources;
+package br.edu.unijui.gca.api.intake.adapters.http;
 
 import br.edu.unijui.gca.api.dtos.SmartContractQueueInboundEventDto;
-import br.edu.unijui.gca.api.services.SmartContractExecutionService;
+import br.edu.unijui.gca.api.intake.application.AcceptExecution;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,10 +17,10 @@ import java.util.UUID;
 @RequestMapping("/smart-contract-execution")
 public class EventIntakeResource {
 
-    private final SmartContractExecutionService service;
+    private final AcceptExecution intake;
 
     @PostMapping("/execute")
     public UUID execute(@RequestBody SmartContractQueueInboundEventDto dto) {
-        return service.execute(dto);
+        return intake.execute(dto);
     }
 }

@@ -1,5 +1,7 @@
 package br.edu.unijui.gca.api;
 
+import br.edu.unijui.gca.api.intake.adapters.http.EventIntakeResource;
+import br.edu.unijui.gca.api.intake.application.AcceptExecution;
 import br.edu.unijui.gca.api.mappers.*;
 import br.edu.unijui.gca.api.resources.AuthResource;
 import br.edu.unijui.gca.api.services.*;
@@ -22,6 +24,7 @@ class EndpointProfileTests {
     private final WebApplicationContextRunner runner = new WebApplicationContextRunner()
             .withPropertyValues("app.backend-url=http://localhost:8080")
             .withUserConfiguration(Endpoints.class)
+            .withBean(AcceptExecution.class, () -> new AcceptExecution(event -> { }))
             .withBean(AuthService.class, () -> mock(AuthService.class))
             .withBean(ApiKeyService.class, () -> mock(ApiKeyService.class))
             .withBean(UserService.class, () -> mock(UserService.class))
@@ -83,7 +86,7 @@ class EndpointProfileTests {
     }
 
     @EnableWebMvc
-    @ComponentScan(basePackageClasses = AuthResource.class)
+    @ComponentScan(basePackageClasses = {AuthResource.class, EventIntakeResource.class})
     static class Endpoints {
     }
 }
